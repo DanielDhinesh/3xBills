@@ -62,7 +62,7 @@ app.include_router(analytics.router, prefix=settings.API_V1_STR, tags=["Executiv
 app.include_router(notifications.router, prefix=settings.API_V1_STR, tags=["Marketing & Notifications"])
 app.include_router(licensing.router, prefix=settings.API_V1_STR, tags=["SaaS License Subscription"])
 app.include_router(backups.router, prefix=settings.API_V1_STR, tags=["Database Backups"])
-app.include_router(settings_endpoint.router, prefix=f"{settings.API_V1_STR}/settings", tags=["System & Admin Settings"])
+app.include_router(settings_endpoint.router, prefix=settings.API_V1_STR, tags=["System & Admin Settings"])
 
 @app.get("/")
 def root():
@@ -73,4 +73,5 @@ def root():
     }
 
 if __name__ == "__main__":
+    # NextGen Retail Billing Engine v2.0 - All Settings Routes Loaded Cleanly
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

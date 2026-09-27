@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
+from datetime import datetime
 import os
 
 from app.core.database import get_db
@@ -10,7 +11,7 @@ from app.core.config import settings
 from app.models.models import User, SystemSetting, Product, Invoice
 from app.api.v1.endpoints.auth import get_admin_user
 from app.services.whatsapp_email_service import send_email_notification
-from app.services.report_export_service import generate_pdf_financial_report
+from app.services.report_export_service import generate_financial_statement_pdf
 
 router = APIRouter()
 
@@ -32,7 +33,8 @@ class SendReportRequest(BaseModel):
     report_type: str = "WEEKLY" # WEEKLY, MONTHLY, ALL_TIME
     recipient_email: Optional[str] = None
 
-@router.get("")
+@router.get("/settings")
+@router.get("/settings/")
 async def get_system_settings(
     admin: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
@@ -52,7 +54,8 @@ async def get_system_settings(
         "report_frequency": db_settings.get("report_frequency", "WEEKLY")
     }
 
-@router.put("")
+@router.put("/settings")
+@router.put("/settings/")
 async def update_system_settings(
     payload: SmtpSettingsUpdate,
     admin: User = Depends(get_admin_user),
@@ -81,7 +84,7 @@ async def update_system_settings(
     await db.commit()
     return {"message": "System Settings & Gmail SMTP configuration updated successfully!"}
 
-@router.post("/test-email")
+@router.post("/settings/test-email")
 async def test_email_configuration(
     payload: TestEmailRequest,
     admin: User = Depends(get_admin_user),
@@ -126,7 +129,7 @@ async def test_email_configuration(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to send email: {str(e)}")
 
-@router.post("/send-report")
+@router.post("/settings/send-report")
 async def email_sales_report(
     payload: SendReportRequest,
     admin: User = Depends(get_admin_user),
@@ -150,16 +153,27 @@ async def email_sales_report(
     inv_res = await db.execute(select(Invoice))
     invoices = inv_res.scalars().all()
     total_sales = sum(float(i.grand_total) for i in invoices)
+    net_profit = sum(float(i.profit_margin) for i in invoices)
+    tax_total = sum(float(i.tax_total) for i in invoices)
 
-    pdf_path = generate_pdf_financial_report(
-        report_title=f"{payload.report_type.title()} Executive Sales & Inventory Report",
-        start_date="",
-        end_date="",
-        total_revenue=total_sales,
-        total_invoices=len(invoices),
-        total_products=len(products),
-        low_stock_count=len(low_stock),
-        invoices=invoices[:15]
+    reports_dir = os.path.join(os.getcwd(), "app", "reports_pdf")
+    os.makedirs(reports_dir, exist_ok=True)
+    report_filename = f"financial_statement_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.pdf"
+    pdf_path = os.path.join(reports_dir, report_filename)
+
+    meta = {
+        "timeframe_label": f"{payload.report_type.title()} Overview",
+        "total_revenue": total_sales,
+        "net_profit": net_profit,
+        "cogs": max(0, total_sales - net_profit),
+        "tax_collected": tax_total
+    }
+
+    generate_financial_statement_pdf(
+        report_meta=meta,
+        monthly_rows=[],
+        top_products=[],
+        output_filepath=pdf_path
     )
 
     body_text = f"""
@@ -194,7 +208,7 @@ async def email_sales_report(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error emailing report: {str(e)}")
 
-@router.post("/send-low-stock-alert")
+@router.post("/settings/send-low-stock-alert")
 async def email_low_stock_alert(
     admin: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
