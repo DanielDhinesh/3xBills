@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bill_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-bill_software_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/backups:/backups
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bill_fastapi_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bill_software_db}
+      - SYNC_DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-bill_software_db}
+      - SECRET_KEY=${SECRET_KEY:-supersecretkey_nextgen_billing_software_2026}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@shopbilling.com}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-your_email@gmail.com}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-your_app_password}
+      - GOOGLE_RATING_URL=${GOOGLE_RATING_URL:-https://g.page/r/example_shop_review/review}
+      - DEFAULT_UPI_PAYMENT_ID=${DEFAULT_UPI_PAYMENT_ID:-shopname@okaxis}
+    depends_on:
+      - db
+    volumes:
+      - ./backend/invoices_pdf:/app/invoices_pdf
+      - ./backend/backups:/app/backups
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bill_react_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
