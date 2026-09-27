@@ -12,6 +12,7 @@ import {
   Sparkles,
   LogOut,
   UserCheck,
+  ShieldCheck,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
     { label: 'Invoices & History', icon: FileText, path: '/invoices', roles: ['ADMIN', 'CASHIER', 'INVENTORY_MANAGER'] },
     { label: 'Customer CRM', icon: Users, path: '/customers', roles: ['ADMIN', 'CASHIER'] },
     { label: 'Staff & User Roles', icon: UserCheck, path: '/users', roles: ['ADMIN'] },
+    { label: 'Admin Settings & Gmail', icon: ShieldCheck, path: '/settings', roles: ['ADMIN'] },
     { label: 'Marketing Automation', icon: Megaphone, path: '/marketing', roles: ['ADMIN'] },
     { label: 'SaaS Licensing', icon: Key, path: '/license', roles: ['ADMIN'] },
     { label: 'Auto DB Backups', icon: Database, path: '/backups', roles: ['ADMIN'] },

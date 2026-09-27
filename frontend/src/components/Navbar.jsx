@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, ShieldCheck, Store, LogOut, User, Menu } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Search, Bell, ShieldCheck, Store, LogOut, User, Menu, ShoppingCart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
 import { getLicenseStatus } from '../services/api';
 
 const Navbar = ({ onToggleMobileMenu }) => {
@@ -39,15 +41,24 @@ const Navbar = ({ onToggleMobileMenu }) => {
         </div>
       </div>
 
-      {/* Right: Actions, License Status & Profile */}
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* License Pill */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs">
-          <ShieldCheck className={`w-4 h-4 ${license?.is_licensed ? 'text-emerald-400' : 'text-amber-400'}`} />
-          <span className="text-slate-300 font-medium">
-            {license ? license.active_license_status || `${license.tier} (${license.days_left}d)` : 'Verifying License...'}
-          </span>
-        </div>
+        {/* Right: Actions, POS Quick Button, License Status & Profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Quick POS Terminal Button */}
+          <a
+            href="/pos"
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            <span>POS Register</span>
+          </a>
+
+          {/* License Pill */}
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs">
+            <ShieldCheck className={`w-4 h-4 ${license?.is_licensed ? 'text-emerald-400' : 'text-amber-400'}`} />
+            <span className="text-slate-300 font-medium">
+              {license ? license.active_license_status || `${license.tier} (${license.days_left}d)` : 'Verifying License...'}
+            </span>
+          </div>
 
         {/* Notifications Icon */}
         <button className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition relative">
@@ -58,20 +69,26 @@ const Navbar = ({ onToggleMobileMenu }) => {
         {/* Active Logged-In Profile Badge */}
         {user && (
           <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white shadow-md shadow-indigo-500/20 shrink-0">
-              {getInitials(user.full_name)}
-            </div>
-            <div className="text-left hidden md:block">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-semibold text-slate-200">{user.full_name}</p>
-                <span className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
-                  user.role === 'ADMIN' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                }`}>
-                  {user.role}
-                </span>
+            <Link
+              to={user.role === 'ADMIN' ? '/settings' : '#'}
+              title={user.role === 'ADMIN' ? 'Click to open Admin Profile & Settings' : user.full_name}
+              className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition group"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-xs text-white shadow-md shadow-indigo-500/20 shrink-0 group-hover:scale-105 transition">
+                {getInitials(user.full_name)}
               </div>
-              <p className="text-[10px] text-slate-400 truncate max-w-[130px]">{user.email}</p>
-            </div>
+              <div className="text-left hidden md:block">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition">{user.full_name}</p>
+                  <span className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
+                    user.role === 'ADMIN' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}>
+                    {user.role}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 truncate max-w-[130px]">{user.email}</p>
+              </div>
+            </Link>
 
             <button
               onClick={logout}

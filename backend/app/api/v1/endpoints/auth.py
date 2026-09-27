@@ -89,6 +89,43 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
 async def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+@router.put("/profile", response_model=Token)
+async def update_user_profile(
+    profile_in: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    if profile_in.email and profile_in.email != current_user.email:
+        res = await db.execute(select(User).filter(User.email == profile_in.email))
+        if res.scalars().first():
+            raise HTTPException(status_code=400, detail="Email is already in use by another user.")
+        current_user.email = profile_in.email
+
+    if profile_in.full_name:
+        current_user.full_name = profile_in.full_name
+
+    if profile_in.new_password:
+        if profile_in.current_password and current_user.role != "ADMIN":
+            if not verify_password(profile_in.current_password, current_user.password_hash):
+                raise HTTPException(status_code=400, detail="Current password is incorrect.")
+        current_user.password_hash = get_password_hash(profile_in.new_password)
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    access_token = create_access_token(subject=current_user.id)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": current_user
+    }
+
 # Admin-Only User Management Endpoints
 @router.get("/users", response_model=List[UserResponse])
 async def list_users(admin: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)):

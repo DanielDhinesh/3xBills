@@ -62,6 +62,7 @@ export const loginUser = async (email, password) => {
 };
 
 export const getCurrentUser = () => api.get('/auth/me');
+export const updateUserProfile = (profileData) => api.put('/auth/profile', profileData);
 
 export const registerUser = (userData) => api.post('/auth/register', userData);
 
@@ -69,6 +70,14 @@ export const getUsers = () => api.get('/auth/users');
 export const createUser = (userData) => api.post('/auth/users', userData);
 export const updateUser = (id, userData) => api.put(`/auth/users/${id}`, userData);
 export const toggleUserStatus = (id) => api.delete(`/auth/users/${id}`);
+
+// System Settings & Email Automation Endpoints
+export const getSystemSettings = () => api.get('/settings');
+export const updateSystemSettings = (data) => api.put('/settings', data);
+export const testEmailConnection = (recipient_email) => api.post('/settings/test-email', { recipient_email });
+export const sendEmailReport = (report_type = 'WEEKLY', recipient_email = '') => 
+  api.post('/settings/send-report', { report_type, recipient_email });
+export const sendLowStockAlertEmail = () => api.post('/settings/send-low-stock-alert');
 
 // Dashboard & Financial Analytics Endpoints
 export const getDashboardKPIs = (startDate = '', endDate = '') => 

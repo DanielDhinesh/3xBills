@@ -13,6 +13,8 @@ import {
   User, 
   Printer,
   Grid,
+  LayoutGrid,
+  List,
   Filter,
   ShoppingBag,
   Receipt,
@@ -27,7 +29,91 @@ const POSTerminal = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [catalogViewMode, setCatalogViewMode] = useState('GRID'); // 'GRID' | 'LIST'
   const [searchQuery, setSearchQuery] = useState('');
+  const [excelInput, setExcelInput] = useState('');
+
+  const [showExcelDropdown, setShowExcelDropdown] = useState(false);
+  const [excelSelectedIndex, setExcelSelectedIndex] = useState(0);
+  const excelInputRef = useRef(null);
+
+  const matchingExcelProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(excelInput.toLowerCase()) ||
+    p.barcode.toLowerCase().includes(excelInput.toLowerCase())
+  );
+
+  const handleAddExcelProduct = (product) => {
+    if (!product) return;
+    if (product.stock_quantity <= 0) {
+      alert(`Item "${product.name}" is OUT OF STOCK!`);
+      return;
+    }
+    addToCart(product);
+    setExcelInput('');
+    setShowExcelDropdown(false);
+    setExcelSelectedIndex(0);
+    excelInputRef.current?.focus();
+  };
+
+  const handleExcelKeyDown = (e) => {
+    if (!excelInput.trim()) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setShowExcelDropdown(true);
+      setExcelSelectedIndex((prev) => Math.min(prev + 1, Math.max(0, matchingExcelProducts.length - 1)));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setShowExcelDropdown(true);
+      setExcelSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const exact = products.find((p) => p.barcode.toLowerCase() === excelInput.trim().toLowerCase());
+      const target = exact || matchingExcelProducts[excelSelectedIndex] || matchingExcelProducts[0];
+      if (target) {
+        handleAddExcelProduct(target);
+      }
+    } else if (e.key === 'Escape') {
+      setShowExcelDropdown(false);
+    }
+  };
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Keyboard navigation for barcode & product search box
+  const handleKeyDown = (e) => {
+    if (!searchQuery.trim()) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setShowDropdown(true);
+      setSelectedIndex((prev) => Math.min(prev + 1, Math.max(0, filteredProducts.length - 1)));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setShowDropdown(true);
+      setSelectedIndex((prev) => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // Check if exact barcode matches first (for fast barcode gun scanning)
+      const exactBarcodeItem = products.find((p) => p.barcode.toLowerCase() === searchQuery.trim().toLowerCase());
+      const selectedItem = exactBarcodeItem || filteredProducts[selectedIndex] || filteredProducts[0];
+
+      if (selectedItem) {
+        if (selectedItem.stock_quantity <= 0) {
+          alert(`Item "${selectedItem.name}" is OUT OF STOCK!`);
+        } else {
+          addToCart(selectedItem);
+          setSearchQuery('');
+          setShowDropdown(false);
+          setSelectedIndex(0);
+          barcodeInputRef.current?.focus();
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
+  };
   
   // Mobile Screen Responsive View State ('CATALOG' | 'CART')
   const [mobileView, setMobileView] = useState('CATALOG');
@@ -338,87 +424,225 @@ const POSTerminal = () => {
           </button>
         </div>
 
-        {/* Search Bar & Barcode Scanner */}
-        <div className="flex items-center gap-2 mb-3 shrink-0">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            <input
-              ref={barcodeInputRef}
-              type="text"
-              placeholder="Scan Barcode Gun or Search Item..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-xl glass-input text-xs font-medium"
-              autoFocus
-            />
+        {/* Search Bar & Barcode Scanner with Live Autocomplete Dropdown */}
+        <div className="relative mb-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                ref={barcodeInputRef}
+                type="text"
+                placeholder="Scan Barcode Gun or Search Item..."
+                value={searchQuery}
+                onFocus={() => setShowDropdown(true)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowDropdown(true);
+                  setSelectedIndex(0);
+                }}
+                onKeyDown={handleKeyDown}
+                className="w-full pl-9 pr-3 py-2 rounded-xl glass-input text-xs font-medium border focus:border-blue-500"
+                autoFocus
+              />
+            </div>
+            <div className="px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
+              <Barcode className="w-4 h-4" /> Fast Scan Ready
+            </div>
           </div>
-          <div className="px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-bold flex items-center gap-1.5 whitespace-nowrap">
-            <Barcode className="w-4 h-4" /> Ready
-          </div>
+
+          {/* High-Speed Interactive Keyboard Dropdown */}
+          {showDropdown && searchQuery.trim().length > 0 && (
+            <div
+              ref={dropdownRef}
+              className="absolute left-0 right-14 top-full mt-1 bg-slate-900/95 border border-slate-700 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-64 overflow-y-auto backdrop-blur-xl"
+            >
+              <div className="px-3 py-1.5 bg-slate-950 border-b border-slate-800 text-[10px] font-bold text-slate-400 flex items-center justify-between">
+                <span>⚡ Matching Items ({filteredProducts.length})</span>
+                <span>Use ↑ ↓ to navigate • ↵ Enter to Select</span>
+              </div>
+
+              {filteredProducts.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-500">
+                  No items found matching "<strong className="text-white">{searchQuery}</strong>"
+                </div>
+              ) : (
+                filteredProducts.map((p, idx) => {
+                  const isSelected = idx === selectedIndex;
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        if (p.stock_quantity > 0) {
+                          addToCart(p);
+                          setSearchQuery('');
+                          setShowDropdown(false);
+                          barcodeInputRef.current?.focus();
+                        }
+                      }}
+                      className={`p-2.5 px-3 flex items-center justify-between gap-3 cursor-pointer border-b border-slate-800/50 transition ${
+                        isSelected
+                          ? 'bg-blue-600/30 border-l-4 border-l-blue-500 text-white'
+                          : 'hover:bg-slate-800/80 text-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] font-mono text-blue-400 font-bold border border-slate-800 shrink-0">
+                          {p.barcode}
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-white truncate">{p.name}</p>
+                          <p className="text-[10px] text-slate-400">{p.category_name || 'General'}</p>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0 flex items-center gap-3">
+                        <div>
+                          <p className="text-xs font-black text-emerald-400">${parseFloat(p.selling_price).toFixed(2)}</p>
+                          <p className={`text-[9px] font-bold ${p.stock_quantity <= p.min_stock_alert ? 'text-rose-400' : 'text-slate-400'}`}>
+                            {p.stock_quantity} {p.unit} left
+                          </p>
+                        </div>
+
+                        {isSelected && (
+                          <span className="px-2 py-0.5 rounded bg-blue-500 text-[10px] font-black text-white shadow">
+                            ↵ Select
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Category Pills Filter */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 no-scrollbar shrink-0">
-          <button
-            onClick={() => setSelectedCategory('ALL')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition ${
-              selectedCategory === 'ALL'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            All Categories
-          </button>
-          {categories.map((cat) => (
+        {/* Category Pills Filter & Catalog View Switcher (Grid vs List) */}
+        <div className="flex items-center justify-between gap-2 pb-2 mb-3 shrink-0 border-b border-slate-800/60">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.name)}
+              onClick={() => setSelectedCategory('ALL')}
               className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition ${
-                selectedCategory === cat.name
+                selectedCategory === 'ALL'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
                   : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
               }`}
             >
-              {cat.name}
+              All Categories
             </button>
-          ))}
-        </div>
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.name)}
+                className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+                  selectedCategory === cat.name
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
+                    : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
 
-        {/* Dense Responsive Product Catalog Grid (1 col on XS, 2 col on SM, 3 col on MD, 4 col on LG) */}
-        <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              onClick={() => product.stock_quantity > 0 && addToCart(product)}
-              className={`p-2.5 rounded-xl border transition duration-150 flex flex-col justify-between cursor-pointer select-none ${
-                product.stock_quantity <= 0
-                  ? 'bg-slate-900/30 border-slate-800 opacity-40 cursor-not-allowed'
-                  : 'bg-slate-900/90 hover:bg-slate-850 border-slate-800 hover:border-blue-500/50 hover:shadow-md hover:shadow-blue-500/10'
+          {/* Grid vs List View Toggle */}
+          <div className="flex items-center p-0.5 bg-slate-900 border border-slate-800 rounded-lg shrink-0">
+            <button
+              onClick={() => setCatalogViewMode('GRID')}
+              title="Grid View"
+              className={`p-1.5 rounded-md transition ${
+                catalogViewMode === 'GRID' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <div>
-                <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-[9px] font-mono text-slate-400 bg-slate-950 px-1 py-0.5 rounded truncate max-w-[70px] sm:max-w-[80px]">
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setCatalogViewMode('LIST')}
+              title="List View"
+              className={`p-1.5 rounded-md transition ${
+                catalogViewMode === 'LIST' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dense Responsive Product Catalog (Grid vs List View) */}
+        {catalogViewMode === 'GRID' ? (
+          <div className="flex-1 overflow-y-auto pr-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 auto-rows-max content-start items-start">
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => product.stock_quantity > 0 && addToCart(product)}
+                className={`p-2.5 rounded-xl border transition duration-150 flex flex-col justify-between cursor-pointer select-none h-fit ${
+                  product.stock_quantity <= 0
+                    ? 'bg-slate-900/30 border-slate-800 opacity-40 cursor-not-allowed'
+                    : 'bg-slate-900/90 hover:bg-slate-850 border-slate-800 hover:border-blue-500/50 hover:shadow-md hover:shadow-blue-500/10'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[9px] font-mono text-slate-400 bg-slate-950 px-1 py-0.5 rounded truncate max-w-[70px] sm:max-w-[80px]">
+                      {product.barcode}
+                    </span>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                      product.stock_quantity <= product.min_stock_alert ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {product.stock_quantity} {product.unit}
+                    </span>
+                  </div>
+                  <h4 className="text-xs font-bold text-white leading-tight line-clamp-2">{product.name}</h4>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between pt-1.5 border-t border-slate-800/60">
+                  <span className="text-xs font-extrabold text-blue-400">${parseFloat(product.selling_price).toFixed(2)}</span>
+                  <span className="text-[10px] font-bold text-slate-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white px-2 py-0.5 rounded transition">
+                    + Add
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto pr-1 space-y-1.5">
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => product.stock_quantity > 0 && addToCart(product)}
+                className={`p-2 px-3 rounded-xl border transition duration-150 flex items-center justify-between gap-2.5 cursor-pointer select-none ${
+                  product.stock_quantity <= 0
+                    ? 'bg-slate-900/30 border-slate-800 opacity-40 cursor-not-allowed'
+                    : 'bg-slate-900/90 hover:bg-slate-850 border-slate-800 hover:border-blue-500/50 hover:shadow-md hover:shadow-blue-500/10'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <span className="px-1.5 py-0.5 rounded bg-slate-950 text-[10px] font-mono text-blue-400 font-bold border border-slate-800 shrink-0">
                     {product.barcode}
                   </span>
-                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded ${
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-bold text-white truncate">{product.name}</h4>
+                    <p className="text-[10px] text-slate-400">{product.category_name || 'General'}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
                     product.stock_quantity <= product.min_stock_alert ? 'bg-rose-500/20 text-rose-300' : 'bg-emerald-500/20 text-emerald-300'
                   }`}>
                     {product.stock_quantity} {product.unit}
                   </span>
+                  <span className="text-xs font-black text-emerald-400 font-mono">
+                    ${parseFloat(product.selling_price).toFixed(2)}
+                  </span>
+                  <button className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-[10px] font-bold transition">
+                    + Add
+                  </button>
                 </div>
-                <h4 className="text-xs font-bold text-white leading-tight line-clamp-2">{product.name}</h4>
               </div>
-
-              <div className="mt-2.5 flex items-center justify-between pt-1.5 border-t border-slate-800/60">
-                <span className="text-xs font-extrabold text-blue-400">${parseFloat(product.selling_price).toFixed(2)}</span>
-                <span className="text-[10px] font-bold text-slate-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white px-2 py-0.5 rounded transition">
-                  + Add
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Mobile View Floating Quick Pay Bar */}
         {cart.length > 0 && (
@@ -531,7 +755,7 @@ const POSTerminal = () => {
           </div>
 
           {/* Customer Input */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
             <div className="relative">
               <User className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
               <input
@@ -551,6 +775,76 @@ const POSTerminal = () => {
                 onChange={(e) => updateActiveTab({ customerPhone: e.target.value })}
                 className="w-full pl-8 pr-2 py-1.5 rounded-lg glass-input text-xs"
               />
+            </div>
+          </div>
+
+          {/* Excel-Style Barcode Direct Entry Row inside Bill Box */}
+          <div className="relative mb-3 p-2.5 rounded-2xl bg-blue-950/40 border border-blue-500/30 shadow-xl space-y-1.5">
+            <div className="flex items-center justify-between text-[10px] font-extrabold text-blue-300">
+              <span className="flex items-center gap-1">
+                <Barcode className="w-3.5 h-3.5 text-blue-400" /> Excel Barcode Entry Row
+              </span>
+              <span className="text-slate-400 font-medium">Type / Scan Barcode & Press <kbd className="px-1 py-0.5 rounded bg-slate-800 text-white font-mono text-[9px]">Enter ↵</kbd></span>
+            </div>
+
+            <div className="relative flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  ref={excelInputRef}
+                  type="text"
+                  placeholder="Enter Barcode / Scan Gun (e.g. 89010010001)..."
+                  value={excelInput}
+                  onFocus={() => setShowExcelDropdown(true)}
+                  onChange={(e) => {
+                    setExcelInput(e.target.value);
+                    setShowExcelDropdown(true);
+                    setExcelSelectedIndex(0);
+                  }}
+                  onKeyDown={handleExcelKeyDown}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+                />
+
+                {/* Autocomplete Dropdown for Excel Row */}
+                {showExcelDropdown && excelInput.trim().length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 shadow-2xl rounded-xl z-50 overflow-hidden max-h-48 overflow-y-auto backdrop-blur-xl">
+                    {matchingExcelProducts.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-slate-500">
+                        No item found for barcode "<strong className="text-white">{excelInput}</strong>"
+                      </div>
+                    ) : (
+                      matchingExcelProducts.map((p, idx) => (
+                        <div
+                          key={p.id}
+                          onClick={() => handleAddExcelProduct(p)}
+                          className={`p-2 px-3 flex items-center justify-between text-xs cursor-pointer border-b border-slate-800/60 transition ${
+                            idx === excelSelectedIndex
+                              ? 'bg-blue-600/30 text-white font-bold border-l-4 border-l-blue-500'
+                              : 'text-slate-300 hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-blue-400 text-[10px] px-1 py-0.5 bg-slate-950 rounded border border-slate-800">{p.barcode}</span>
+                            <span>{p.name}</span>
+                          </div>
+                          <span className="font-bold text-emerald-400">${parseFloat(p.selling_price).toFixed(2)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const exact = products.find((p) => p.barcode.toLowerCase() === excelInput.trim().toLowerCase());
+                  const target = exact || matchingExcelProducts[excelSelectedIndex] || matchingExcelProducts[0];
+                  if (target) handleAddExcelProduct(target);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1 shadow-md transition whitespace-nowrap"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Row
+              </button>
             </div>
           </div>
 

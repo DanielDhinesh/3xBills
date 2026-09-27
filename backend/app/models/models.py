@@ -148,3 +148,11 @@ class Campaign(Base):
     target_count = Column(Integer, default=0)
     sent_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+

@@ -26,17 +26,31 @@ def generate_whatsapp_bill_url(phone: str, customer_name: str, invoice_number: s
     encoded_message = urllib.parse.quote(message)
     return f"https://wa.me/{clean_phone}?text={encoded_message}"
 
-def send_email_notification(to_email: str, subject: str, body_text: str, attachment_filepath: Optional[str] = None) -> bool:
+def send_email_notification(
+    to_email: str, 
+    subject: str, 
+    body_text: str, 
+    attachment_filepath: Optional[str] = None,
+    smtp_host: Optional[str] = None,
+    smtp_port: Optional[int] = None,
+    smtp_user: Optional[str] = None,
+    smtp_password: Optional[str] = None
+) -> bool:
     """
-    Sends an email using standard SMTP.
+    Sends an email using standard SMTP or custom provided SMTP parameters.
     """
-    if not settings.SMTP_USER or settings.SMTP_USER == "your_email@gmail.com":
+    host = smtp_host or settings.SMTP_HOST
+    port = smtp_port or settings.SMTP_PORT
+    user = smtp_user or settings.SMTP_USER
+    password = smtp_password or settings.SMTP_PASSWORD
+
+    if not user or user == "your_email@gmail.com":
         print(f"[Simulated Email Dispatch] To: {to_email} | Subject: {subject}")
         return True
 
     try:
         msg = MIMEMultipart()
-        msg['From'] = settings.SMTP_USER
+        msg['From'] = user
         msg['To'] = to_email
         msg['Subject'] = subject
 
@@ -48,15 +62,15 @@ def send_email_notification(to_email: str, subject: str, body_text: str, attachm
                 part['Content-Disposition'] = f'attachment; filename="{os.path.basename(attachment_filepath)}"'
                 msg.attach(part)
 
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
+        server = smtplib.SMTP(host, int(port))
         server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.login(user, password)
         server.send_message(msg)
         server.quit()
         return True
     except Exception as e:
         print(f"[Email Send Error]: {str(e)}")
-        return False
+        raise e
 
 def dispatch_bulk_campaign(customer_emails: List[str], campaign_title: str, campaign_body: str) -> int:
     """

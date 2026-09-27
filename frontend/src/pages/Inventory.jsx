@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Plus, Search, AlertTriangle, Barcode, Trash2, Edit3, Tag, Truck, RefreshCw,
-  DollarSign, TrendingUp, Filter, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, Layers, CheckCircle2, AlertCircle
+  DollarSign, TrendingUp, Filter, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, Layers, CheckCircle2, AlertCircle, X
 } from 'lucide-react';
 import { 
   getProducts, createProduct, updateProduct, restockProduct, deleteProduct, 
@@ -12,6 +12,13 @@ const Inventory = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+
+  // Multi-Select Goods State
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
+  const [showBulkRestockModal, setShowBulkRestockModal] = useState(false);
+  const [bulkRestockQty, setBulkRestockQty] = useState(10);
+  const [showBulkTaxModal, setShowBulkTaxModal] = useState(false);
+  const [bulkTaxRate, setBulkTaxRate] = useState(18);
 
   // Filter & Column Sort States
   const [search, setSearch] = useState('');
@@ -188,13 +195,116 @@ const Inventory = () => {
     setStockStatusFilter('ALL');
     setSortField('selling_price');
     setSortOrder('desc');
+    setSelectedProductIds([]);
   };
+
+  // Multi-Select Handlers
+  const isAllSelected = useMemo(() => {
+    if (!filteredProducts.length) return false;
+    return filteredProducts.every((p) => selectedProductIds.includes(p.id));
+  }, [filteredProducts, selectedProductIds]);
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(filteredProducts.map((p) => p.id));
+    }
+  };
+
+  const handleToggleSelectProduct = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedProductIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedProductIds.length) return;
+    if (window.confirm(`Are you sure you want to deactivate ${selectedProductIds.length} selected goods?`)) {
+      try {
+        await Promise.all(selectedProductIds.map((id) => deleteProduct(id)));
+        setSelectedProductIds([]);
+        fetchInventory();
+        alert(`Successfully deactivated ${selectedProductIds.length} items.`);
+      } catch (err) {
+        alert('Error executing bulk deactivation');
+      }
+    }
+  };
+
+  const handleBulkRestockSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProductIds.length) return;
+    try {
+      await Promise.all(
+        selectedProductIds.map((id) =>
+          restockProduct(id, {
+            quantity_to_add: bulkRestockQty,
+            new_cost_price: 0,
+            new_selling_price: 0
+          })
+        )
+      );
+      setShowBulkRestockModal(false);
+      setSelectedProductIds([]);
+      fetchInventory();
+      alert(`Successfully added +${bulkRestockQty} units to ${selectedProductIds.length} products!`);
+    } catch (err) {
+      alert('Error applying bulk restock.');
+    }
+  };
+
+  const handleBulkTaxSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProductIds.length) return;
+    try {
+      const selectedProducts = products.filter((p) => selectedProductIds.includes(p.id));
+      await Promise.all(
+        selectedProducts.map((p) =>
+          updateProduct(p.id, {
+            ...p,
+            cost_price: parseFloat(p.cost_price),
+            selling_price: parseFloat(p.selling_price),
+            tax_rate: parseFloat(bulkTaxRate)
+          })
+        )
+      );
+      setShowBulkTaxModal(false);
+      setSelectedProductIds([]);
+      fetchInventory();
+      alert(`Successfully updated Tax Rate to ${bulkTaxRate}% for ${selectedProducts.length} items!`);
+    } catch (err) {
+      alert('Error updating bulk tax rate.');
+    }
+  };
+
+  const [isCreatingNewCat, setIsCreatingNewCat] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
     try {
-      const res = await createProduct(newProduct);
+      let finalCategoryId = newProduct.category_id;
+      if (isCreatingNewCat && customCategoryName.trim()) {
+        const catRes = await createCategory({
+          name: customCategoryName.trim(),
+          description: 'Custom added category from inventory'
+        });
+        finalCategoryId = catRes.data.id;
+        await fetchCategoriesAndSuppliers();
+      }
+
+      const payload = {
+        ...newProduct,
+        category_id: finalCategoryId || null,
+        supplier_id: newProduct.supplier_id || null
+      };
+
+      const res = await createProduct(payload);
       setShowAddModal(false);
+      setIsCreatingNewCat(false);
+      setCustomCategoryName('');
       setNewProduct({
         barcode: '',
         name: '',
@@ -458,11 +568,20 @@ const Inventory = () => {
           )}
         </div>
 
-        {/* Product Catalog Table with Direct Column Header Click Sorting */}
+        {/* Product Catalog Table with Multi-Select Checkboxes & Header Click Sorting */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs min-w-[700px]">
+          <table className="w-full text-left text-xs min-w-[750px]">
             <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 uppercase font-semibold">
               <tr>
+                <th className="p-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 rounded border-slate-700 text-blue-600 focus:ring-blue-500 bg-slate-900 cursor-pointer"
+                    title="Select all filtered items"
+                  />
+                </th>
                 <SortableTh field="barcode" label="Barcode" />
                 <SortableTh field="name" label="Product Name" />
                 <SortableTh field="category_name" label="Category" />
@@ -476,7 +595,7 @@ const Inventory = () => {
             <tbody className="divide-y divide-slate-800/60 font-medium">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-12 text-center text-slate-500">
+                  <td colSpan="9" className="p-12 text-center text-slate-500">
                     <Package className="w-10 h-10 mx-auto text-slate-600 mb-2" />
                     <p className="font-bold text-sm text-slate-400">No matching products found</p>
                     <p className="text-xs text-slate-500 mt-1">Click any header name above to sort or reset filters</p>
@@ -492,9 +611,25 @@ const Inventory = () => {
                 filteredProducts.map((p) => {
                   const isHighestPrice = metrics.highestPriceItem && metrics.highestPriceItem.id === p.id;
                   const isLowStock = p.stock_quantity <= p.min_stock_alert;
+                  const isSelected = selectedProductIds.includes(p.id);
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-900/40 transition">
+                    <tr 
+                      key={p.id} 
+                      className={`transition ${
+                        isSelected 
+                          ? 'bg-blue-950/40 text-white font-bold border-l-4 border-l-blue-500' 
+                          : 'hover:bg-slate-900/40'
+                      }`}
+                    >
+                      <td className="p-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleToggleSelectProduct(p.id, e)}
+                          className="w-4 h-4 rounded border-slate-700 text-blue-600 focus:ring-blue-500 bg-slate-900 cursor-pointer"
+                        />
+                      </td>
                       <td className="p-4 font-mono text-blue-400 font-bold">{p.barcode}</td>
                       <td className="p-4 font-bold text-white flex items-center gap-2">
                         {p.name}
@@ -555,6 +690,135 @@ const Inventory = () => {
           </table>
         </div>
       </div>
+
+      {/* Floating Multi-Select Bulk Actions Toolbar */}
+      {selectedProductIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-blue-500/50 shadow-2xl backdrop-blur-xl rounded-2xl p-3 sm:px-6 flex items-center justify-between gap-4 max-w-2xl w-[92%] animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow">
+              {selectedProductIds.length}
+            </span>
+            <span className="text-xs font-bold text-white">Goods Selected</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowBulkRestockModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 transition shadow"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Bulk Restock
+            </button>
+            <button
+              onClick={() => setShowBulkTaxModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1 transition shadow"
+            >
+              <Tag className="w-3.5 h-3.5" /> Bulk Tax %
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold flex items-center gap-1 transition shadow"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Bulk Deactivate
+            </button>
+            <button
+              onClick={() => setSelectedProductIds([])}
+              className="p-1.5 rounded-xl bg-slate-800 text-slate-400 hover:text-white transition"
+              title="Clear Selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Restock Modal */}
+      {showBulkRestockModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <Truck className="w-5 h-5 text-emerald-400" /> Bulk Restock Shipment ({selectedProductIds.length} Products)
+            </h3>
+            <p className="text-xs text-slate-400">
+              Enter stock units quantity to add to all <strong className="text-white">{selectedProductIds.length}</strong> selected goods.
+            </p>
+
+            <form onSubmit={handleBulkRestockSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">Quantity to Add per Product (+ Units)</label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={bulkRestockQty}
+                  onChange={(e) => setBulkRestockQty(parseInt(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-xl glass-input font-bold text-sm text-emerald-400"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkRestockModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                >
+                  Apply Bulk Restock (+{bulkRestockQty})
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Tax Rate Modal */}
+      {showBulkTaxModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <h3 className="text-base font-black text-white flex items-center gap-2">
+              <Tag className="w-5 h-5 text-blue-400" /> Update Tax Rate ({selectedProductIds.length} Products)
+            </h3>
+            <p className="text-xs text-slate-400">
+              Apply new tax percentage rate to all <strong className="text-white">{selectedProductIds.length}</strong> selected goods.
+            </p>
+
+            <form onSubmit={handleBulkTaxSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">New Tax Rate (%)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  required
+                  value={bulkTaxRate}
+                  onChange={(e) => setBulkTaxRate(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 rounded-xl glass-input font-bold text-sm text-blue-400"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkTaxModal(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                >
+                  Apply {bulkTaxRate}% Tax Rate
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Restock Shipment Modal */}
       {showRestockModal && restockItem && (
@@ -767,6 +1031,57 @@ const Inventory = () => {
                     className="w-full p-2.5 rounded-xl glass-input"
                     placeholder="Item title"
                   />
+                </div>
+              </div>
+
+              {/* Category & Supplier Selection / Creation */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold block">Category</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingNewCat(!isCreatingNewCat)}
+                      className="text-[10px] text-blue-400 hover:underline font-bold"
+                    >
+                      {isCreatingNewCat ? '← Select Existing' : '+ Add New Category'}
+                    </button>
+                  </div>
+                  {isCreatingNewCat ? (
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Fresh Dairy & Bakery"
+                      value={customCategoryName}
+                      onChange={(e) => setCustomCategoryName(e.target.value)}
+                      className="w-full p-2 rounded-xl glass-input text-white border-blue-500/50"
+                    />
+                  ) : (
+                    <select
+                      value={newProduct.category_id}
+                      onChange={(e) => setNewProduct({ ...newProduct, category_id: e.target.value })}
+                      className="w-full p-2 rounded-xl glass-input text-white bg-slate-900 border-slate-800"
+                    >
+                      <option value="">Select Category...</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-slate-400 font-semibold mb-1 block">Supplier (Optional)</label>
+                  <select
+                    value={newProduct.supplier_id}
+                    onChange={(e) => setNewProduct({ ...newProduct, supplier_id: e.target.value })}
+                    className="w-full p-2 rounded-xl glass-input text-white bg-slate-900 border-slate-800"
+                  >
+                    <option value="">Select Supplier...</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

@@ -14,6 +14,7 @@ import Marketing from './pages/Marketing';
 import LicensePage from './pages/LicensePage';
 import BackupsPage from './pages/BackupsPage';
 import UsersPage from './pages/UsersPage';
+import AdminSettings from './pages/AdminSettings';
 
 const ProtectedLayout = () => {
   const { user, loading } = useAuth();
@@ -45,6 +46,7 @@ const ProtectedLayout = () => {
             <Route path="/invoices" element={<InvoicesList />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/users" element={user.role === 'ADMIN' ? <UsersPage /> : <Navigate to="/" replace />} />
+            <Route path="/settings" element={user.role === 'ADMIN' ? <AdminSettings /> : <Navigate to="/" replace />} />
             <Route path="/marketing" element={user.role === 'ADMIN' ? <Marketing /> : <Navigate to="/" replace />} />
             <Route path="/license" element={user.role === 'ADMIN' ? <LicensePage /> : <Navigate to="/" replace />} />
             <Route path="/backups" element={user.role === 'ADMIN' ? <BackupsPage /> : <Navigate to="/" replace />} />

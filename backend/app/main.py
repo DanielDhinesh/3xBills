@@ -10,7 +10,7 @@ from app.db.init_db import init_db_data
 from app.services.backup_service import perform_database_backup
 
 # API Endpoint imports
-from app.api.v1.endpoints import auth, products, customers, invoices, analytics, notifications, licensing, backups
+from app.api.v1.endpoints import auth, products, customers, invoices, analytics, notifications, licensing, backups, settings as settings_endpoint
 
 scheduler = AsyncIOScheduler()
 
@@ -62,6 +62,7 @@ app.include_router(analytics.router, prefix=settings.API_V1_STR, tags=["Executiv
 app.include_router(notifications.router, prefix=settings.API_V1_STR, tags=["Marketing & Notifications"])
 app.include_router(licensing.router, prefix=settings.API_V1_STR, tags=["SaaS License Subscription"])
 app.include_router(backups.router, prefix=settings.API_V1_STR, tags=["Database Backups"])
+app.include_router(settings_endpoint.router, prefix=f"{settings.API_V1_STR}/settings", tags=["System & Admin Settings"])
 
 @app.get("/")
 def root():
