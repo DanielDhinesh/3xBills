@@ -59,7 +59,8 @@ async def register_user(user_in: UserCreate, db: AsyncSession = Depends(get_db))
         email=user_in.email,
         password_hash=get_password_hash(user_in.password),
         full_name=user_in.full_name,
-        role=user_in.role
+        role=user_in.role or "CASHIER",
+        is_active=False # Account pending admin approval
     )
     db.add(new_user)
     await db.commit()
@@ -75,7 +76,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         raise HTTPException(status_code=400, detail="Incorrect email or password.")
         
     if not user.is_active:
-        raise HTTPException(status_code=400, detail="User account is inactive.")
+        raise HTTPException(status_code=400, detail="Your account is pending Admin approval. Please ask an Admin to activate your account.")
         
     access_token = create_access_token(subject=user.id)
     return {

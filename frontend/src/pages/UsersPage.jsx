@@ -121,6 +121,8 @@ const UsersPage = () => {
     return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
   };
 
+  const pendingUsersCount = users.filter((u) => !u.is_active).length;
+
   return (
     <div className="p-6 space-y-6">
       {/* Header & Add Button */}
@@ -129,7 +131,7 @@ const UsersPage = () => {
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <UserCheck className="w-6 h-6 text-blue-400" /> Staff & User Role Management
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Admin privilege panel to create, assign roles, and manage store cashiers & staff accounts</p>
+          <p className="text-xs text-slate-400 mt-1">Admin privilege panel to create, approve new signups, assign roles, and manage staff accounts</p>
         </div>
 
         <button
@@ -139,6 +141,16 @@ const UsersPage = () => {
           <Plus className="w-4 h-4" /> Add New Staff Account
         </button>
       </div>
+
+      {/* Pending Approval Banner */}
+      {pendingUsersCount > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+            <span>You have <strong>{pendingUsersCount}</strong> new user registration request(s) pending your Admin approval.</span>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="p-4 rounded-2xl glass-card border border-slate-800 flex items-center justify-between">
@@ -165,7 +177,7 @@ const UsersPage = () => {
               <th className="p-4">Staff Member</th>
               <th className="p-4">Email Address</th>
               <th className="p-4">Assigned Role</th>
-              <th className="p-4">Status</th>
+              <th className="p-4">Account Status</th>
               <th className="p-4">Created Date</th>
               <th className="p-4 text-right">Actions</th>
             </tr>
@@ -191,10 +203,12 @@ const UsersPage = () => {
                   </span>
                 </td>
                 <td className="p-4">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                    u.is_active ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold ${
+                    u.is_active 
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
                   }`}>
-                    {u.is_active ? 'Active' : 'Inactive'}
+                    {u.is_active ? 'Active' : '⚠️ Pending Approval'}
                   </span>
                 </td>
                 <td className="p-4 text-slate-400">{new Date(u.created_at).toLocaleDateString()}</td>
@@ -211,16 +225,16 @@ const UsersPage = () => {
                     <button
                       onClick={() => handleToggleActive(u)}
                       disabled={u.id === currentUser?.id}
-                      title={u.is_active ? "Deactivate Account" : "Activate Account"}
-                      className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center gap-1 ${
+                      title={u.is_active ? "Deactivate Account" : "Approve and Activate User"}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 ${
                         u.id === currentUser?.id
                           ? 'opacity-30 cursor-not-allowed bg-slate-800 text-slate-500'
                           : u.is_active
                           ? 'bg-rose-500/10 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30'
-                          : 'bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black shadow-lg shadow-emerald-500/25'
                       }`}
                     >
-                      {u.is_active ? 'Deactivate' : 'Activate'}
+                      {u.is_active ? 'Deactivate' : '✓ Approve & Activate'}
                     </button>
                   </div>
                 </td>
