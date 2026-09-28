@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { CompanyProvider } from './context/CompanyContext';
 
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
@@ -22,7 +23,7 @@ const ProtectedLayout = () => {
 
   if (loading) {
     return (
-      <div className="h-screen bg-slate-950 flex flex-col items-center justify-center text-white text-xs font-bold gap-3">
+      <div className="h-screen app-bg-main flex flex-col items-center justify-center app-text-primary text-xs font-bold gap-3">
         <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
         <p>Loading NextGen SaaS Terminal...</p>
       </div>
@@ -34,11 +35,11 @@ const ProtectedLayout = () => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden selection:bg-blue-500 selection:text-white">
+    <div className="flex h-screen app-bg-main overflow-hidden selection:bg-blue-500 selection:text-white">
       <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
         <Navbar onToggleMobileMenu={() => setMobileOpen(!mobileOpen)} />
-        <main className="flex-1 overflow-y-auto bg-slate-950/90">
+        <main className="flex-1 overflow-y-auto app-bg-main">
           <Routes>
             <Route path="/" element={user.role === 'CASHIER' ? <Navigate to="/pos" replace /> : <Dashboard />} />
             <Route path="/pos" element={<POSTerminal />} />
@@ -60,15 +61,18 @@ const ProtectedLayout = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={<ProtectedLayout />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+    <CompanyProvider>
+      <AuthProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*" element={<ProtectedLayout />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </CompanyProvider>
   );
 }
 
 export default App;
+

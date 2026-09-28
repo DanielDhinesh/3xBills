@@ -1,10 +1,30 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import text
 from app.core.security import get_password_hash
 from app.models.models import User, Category, Supplier, Product, Customer, Invoice, InvoiceItem
 from decimal import Decimal
 
+async def run_auto_migrations(db: AsyncSession):
+    try:
+        bind = db.bind
+        dialect_name = bind.dialect.name if bind else "sqlite"
+        if dialect_name == "sqlite":
+            res = await db.execute(text("PRAGMA table_info(invoices)"))
+            cols = [r[1] for r in res.fetchall()]
+            if "branch_name" not in cols:
+                await db.execute(text("ALTER TABLE invoices ADD COLUMN branch_name VARCHAR DEFAULT 'Main Downtown Flagship'"))
+            if "terminal_name" not in cols:
+                await db.execute(text("ALTER TABLE invoices ADD COLUMN terminal_name VARCHAR DEFAULT 'Counter #01 - Main Cash Register'"))
+        else:
+            await db.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS branch_name VARCHAR DEFAULT 'Main Downtown Flagship'"))
+            await db.execute(text("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS terminal_name VARCHAR DEFAULT 'Counter #01 - Main Cash Register'"))
+        await db.commit()
+    except Exception as e:
+        print("[Auto-Migration Info]:", e)
+
 async def init_db_data(db: AsyncSession):
+    await run_auto_migrations(db)
     # 1. Create Default Admin User
     user_res = await db.execute(select(User).filter(User.email == "admin@shopbilling.com"))
     if not user_res.scalars().first():

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 import os
+import shutil
+import uuid
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -15,7 +17,8 @@ from app.services.report_export_service import generate_financial_statement_pdf
 
 router = APIRouter()
 
-class SmtpSettingsUpdate(BaseModel):
+class SystemSettingsUpdate(BaseModel):
+    # SMTP Settings
     smtp_host: Optional[str] = "smtp.gmail.com"
     smtp_port: Optional[int] = 587
     smtp_user: Optional[str] = ""
@@ -25,6 +28,32 @@ class SmtpSettingsUpdate(BaseModel):
     enable_inventory_updates: Optional[bool] = True
     enable_periodic_reports: Optional[bool] = True
     report_frequency: Optional[str] = "WEEKLY" # DAILY, WEEKLY, MONTHLY
+    
+    # Company Profile & Branding Details
+    company_name: Optional[str] = "NextGen Enterprise Supermarket"
+    company_tagline: Optional[str] = "Retail & Wholesale POS Billing Engine"
+    company_logo: Optional[str] = ""
+    company_phone: Optional[str] = "+1 (800) 555-0199"
+    company_email: Optional[str] = "contact@shopbilling.com"
+    company_address: Optional[str] = "100 Commercial Plaza, Suite 400"
+    tax_id: Optional[str] = "GSTIN: 27AAAAA0000A1Z5"
+    company_website: Optional[str] = "https://3xbills-retail.com"
+    google_rating_url: Optional[str] = "https://g.page/r/example_shop_review/review"
+    default_upi_payment_id: Optional[str] = "shopname@okaxis"
+    invoice_footer_note: Optional[str] = "Thank you for shopping with us! Items can be exchanged within 7 days with valid tax receipt."
+    
+    # Currency Settings
+    currency_symbol: Optional[str] = "$"
+    currency_code: Optional[str] = "USD"
+
+    # Multi-Branch & Multi-Terminal Settings
+    active_branch_name: Optional[str] = "Main Downtown Flagship"
+    active_terminal_name: Optional[str] = "Counter #01 - Main Cash Register"
+    branches_list_json: Optional[str] = None
+    terminals_list_json: Optional[str] = None
+
+    # Theme Selection
+    active_theme: Optional[str] = "enterprise-slate"
 
 class TestEmailRequest(BaseModel):
     recipient_email: str
@@ -32,6 +61,41 @@ class TestEmailRequest(BaseModel):
 class SendReportRequest(BaseModel):
     report_type: str = "WEEKLY" # WEEKLY, MONTHLY, ALL_TIME
     recipient_email: Optional[str] = None
+
+DEFAULT_BRANCHES_JSON = '[{"id":"br-1","name":"Main Downtown Flagship","code":"BR-01","phone":"+1 800-555-0199","address":"100 Commercial Plaza, Suite 400"},{"id":"br-2","name":"Airport Plaza Branch","code":"BR-02","phone":"+1 800-555-0299","address":"Terminal 2, Airport Retail Zone"}]'
+DEFAULT_TERMINALS_JSON = '[{"id":"term-1","name":"Counter #01 - Main Cash Register","code":"TERM-01","branch_name":"Main Downtown Flagship"},{"id":"term-2","name":"Counter #02 - Express POS","code":"TERM-02","branch_name":"Main Downtown Flagship"},{"id":"term-3","name":"Counter #03 - Wholesale Billing Desk","code":"TERM-03","branch_name":"Airport Plaza Branch"}]'
+
+@router.get("/settings/public")
+@router.get("/settings/public/")
+async def get_public_branding_settings(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Publicly accessible endpoint for fetching company logo, name, currency, branches, terminals, tax ID, and active theme.
+    """
+    result = await db.execute(select(SystemSetting))
+    db_settings = {s.key: s.value for s in result.scalars().all()}
+
+    return {
+        "company_name": db_settings.get("company_name", settings.SHOP_NAME),
+        "company_tagline": db_settings.get("company_tagline", "Retail & Wholesale SaaS Billing Engine"),
+        "company_logo": db_settings.get("company_logo", ""),
+        "company_phone": db_settings.get("company_phone", settings.SHOP_PHONE),
+        "company_email": db_settings.get("company_email", settings.ADMIN_EMAIL),
+        "company_address": db_settings.get("company_address", settings.SHOP_ADDRESS),
+        "tax_id": db_settings.get("tax_id", "GSTIN: 27AAAAA0000A1Z5"),
+        "company_website": db_settings.get("company_website", "https://3xbills-retail.com"),
+        "google_rating_url": db_settings.get("google_rating_url", settings.GOOGLE_RATING_URL),
+        "default_upi_payment_id": db_settings.get("default_upi_payment_id", settings.DEFAULT_UPI_PAYMENT_ID),
+        "invoice_footer_note": db_settings.get("invoice_footer_note", "Thank you for shopping with us! Returns valid within 7 days."),
+        "currency_symbol": db_settings.get("currency_symbol", "$"),
+        "currency_code": db_settings.get("currency_code", "USD"),
+        "active_branch_name": db_settings.get("active_branch_name", "Main Downtown Flagship"),
+        "active_terminal_name": db_settings.get("active_terminal_name", "Counter #01 - Main Cash Register"),
+        "branches_list_json": db_settings.get("branches_list_json", DEFAULT_BRANCHES_JSON),
+        "terminals_list_json": db_settings.get("terminals_list_json", DEFAULT_TERMINALS_JSON),
+        "active_theme": db_settings.get("active_theme", "enterprise-slate")
+    }
 
 @router.get("/settings")
 @router.get("/settings/")
@@ -43,6 +107,7 @@ async def get_system_settings(
     db_settings = {s.key: s.value for s in result.scalars().all()}
 
     return {
+        # SMTP
         "smtp_host": db_settings.get("smtp_host", settings.SMTP_HOST),
         "smtp_port": int(db_settings.get("smtp_port", settings.SMTP_PORT)),
         "smtp_user": db_settings.get("smtp_user", settings.SMTP_USER),
@@ -51,17 +116,38 @@ async def get_system_settings(
         "enable_low_stock_alerts": db_settings.get("enable_low_stock_alerts", "true") == "true",
         "enable_inventory_updates": db_settings.get("enable_inventory_updates", "true") == "true",
         "enable_periodic_reports": db_settings.get("enable_periodic_reports", "true") == "true",
-        "report_frequency": db_settings.get("report_frequency", "WEEKLY")
+        "report_frequency": db_settings.get("report_frequency", "WEEKLY"),
+        
+        # Company Profile & Branding
+        "company_name": db_settings.get("company_name", settings.SHOP_NAME),
+        "company_tagline": db_settings.get("company_tagline", "Retail & Wholesale SaaS Billing Engine"),
+        "company_logo": db_settings.get("company_logo", ""),
+        "company_phone": db_settings.get("company_phone", settings.SHOP_PHONE),
+        "company_email": db_settings.get("company_email", admin.email),
+        "company_address": db_settings.get("company_address", settings.SHOP_ADDRESS),
+        "tax_id": db_settings.get("tax_id", "GSTIN: 27AAAAA0000A1Z5"),
+        "company_website": db_settings.get("company_website", "https://3xbills-retail.com"),
+        "google_rating_url": db_settings.get("google_rating_url", settings.GOOGLE_RATING_URL),
+        "default_upi_payment_id": db_settings.get("default_upi_payment_id", settings.DEFAULT_UPI_PAYMENT_ID),
+        "invoice_footer_note": db_settings.get("invoice_footer_note", "Thank you for shopping with us! Returns valid within 7 days with invoice."),
+        "currency_symbol": db_settings.get("currency_symbol", "$"),
+        "currency_code": db_settings.get("currency_code", "USD"),
+        "active_branch_name": db_settings.get("active_branch_name", "Main Downtown Flagship"),
+        "active_terminal_name": db_settings.get("active_terminal_name", "Counter #01 - Main Cash Register"),
+        "branches_list_json": db_settings.get("branches_list_json", DEFAULT_BRANCHES_JSON),
+        "terminals_list_json": db_settings.get("terminals_list_json", DEFAULT_TERMINALS_JSON),
+        "active_theme": db_settings.get("active_theme", "enterprise-slate")
     }
 
 @router.put("/settings")
 @router.put("/settings/")
 async def update_system_settings(
-    payload: SmtpSettingsUpdate,
+    payload: SystemSettingsUpdate,
     admin: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db)
 ):
     updates = {
+        # SMTP
         "smtp_host": payload.smtp_host or "smtp.gmail.com",
         "smtp_port": str(payload.smtp_port or 587),
         "smtp_user": payload.smtp_user or "",
@@ -70,19 +156,78 @@ async def update_system_settings(
         "enable_low_stock_alerts": "true" if payload.enable_low_stock_alerts else "false",
         "enable_inventory_updates": "true" if payload.enable_inventory_updates else "false",
         "enable_periodic_reports": "true" if payload.enable_periodic_reports else "false",
-        "report_frequency": payload.report_frequency or "WEEKLY"
+        "report_frequency": payload.report_frequency or "WEEKLY",
+        
+        # Company Profile & Branding
+        "company_name": payload.company_name or settings.SHOP_NAME,
+        "company_tagline": payload.company_tagline or "",
+        "company_logo": payload.company_logo or "",
+        "company_phone": payload.company_phone or "",
+        "company_email": payload.company_email or "",
+        "company_address": payload.company_address or "",
+        "tax_id": payload.tax_id or "",
+        "company_website": payload.company_website or "",
+        "google_rating_url": payload.google_rating_url or settings.GOOGLE_RATING_URL,
+        "default_upi_payment_id": payload.default_upi_payment_id or settings.DEFAULT_UPI_PAYMENT_ID,
+        "invoice_footer_note": payload.invoice_footer_note or "",
+        "currency_symbol": payload.currency_symbol or "$",
+        "currency_code": payload.currency_code or "USD",
+        "active_branch_name": payload.active_branch_name or "Main Downtown Flagship",
+        "active_terminal_name": payload.active_terminal_name or "Counter #01 - Main Cash Register",
+        "active_theme": payload.active_theme or "enterprise-slate"
     }
+
+    if payload.branches_list_json is not None:
+        updates["branches_list_json"] = payload.branches_list_json
+    if payload.terminals_list_json is not None:
+        updates["terminals_list_json"] = payload.terminals_list_json
 
     for key, val in updates.items():
         res = await db.execute(select(SystemSetting).filter(SystemSetting.key == key))
         setting = res.scalars().first()
         if setting:
-            setting.value = val
+            setting.value = str(val)
         else:
-            db.add(SystemSetting(key=key, value=val))
+            db.add(SystemSetting(key=key, value=str(val)))
 
     await db.commit()
-    return {"message": "System Settings & Gmail SMTP configuration updated successfully!"}
+    return {"message": "Company details, branding & system settings updated successfully!"}
+
+@router.post("/settings/upload-logo")
+async def upload_company_logo(
+    file: UploadFile = File(...),
+    admin: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Uploads company logo image, saves to static uploads directory, and updates company_logo setting.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file must be an image (PNG, JPG, SVG, WebP, etc.).")
+
+    static_upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "static", "uploads"))
+    os.makedirs(static_upload_dir, exist_ok=True)
+
+
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    unique_filename = f"logo_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(static_upload_dir, unique_filename)
+
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    logo_url = f"/static/uploads/{unique_filename}"
+
+    # Update in DB
+    res = await db.execute(select(SystemSetting).filter(SystemSetting.key == "company_logo"))
+    setting = res.scalars().first()
+    if setting:
+        setting.value = logo_url
+    else:
+        db.add(SystemSetting(key="company_logo", value=logo_url))
+
+    await db.commit()
+    return {"message": "Company logo uploaded successfully!", "logo_url": logo_url}
 
 @router.post("/settings/test-email")
 async def test_email_configuration(
@@ -193,10 +338,11 @@ async def email_sales_report(
     </div>
     """
 
+    shop_title = db_settings.get("company_name", settings.SHOP_NAME)
     try:
         send_email_notification(
             to_email=target_email,
-            subject=f"[{settings.SHOP_NAME}] {payload.report_type.title()} Sales & Inventory Report",
+            subject=f"[{shop_title}] {payload.report_type.title()} Sales & Inventory Report",
             body_text=body_text,
             attachment_filepath=pdf_path,
             smtp_host=smtp_host,
@@ -269,3 +415,4 @@ async def email_low_stock_alert(
         return {"message": f"Low stock alert email dispatched for {len(low_stock)} items to {target_email}!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending low stock alert: {str(e)}")
+

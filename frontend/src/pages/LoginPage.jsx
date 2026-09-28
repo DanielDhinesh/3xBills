@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Mail, Lock, ShieldCheck, UserCheck, ArrowRight, UserPlus, CheckCircle2, User } from 'lucide-react';
+import { Sparkles, Mail, Lock, ShieldCheck, UserCheck, ArrowRight, UserPlus, CheckCircle2, User, Store } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { registerUser } from '../services/api';
+import { useCompany } from '../context/CompanyContext';
+import { registerUser, getAssetUrl } from '../services/api';
 
 const LoginPage = () => {
   const { login } = useAuth();
+  const { company } = useCompany();
   const navigate = useNavigate();
 
   const [isSignUp, setIsSignUp] = useState(false);
@@ -72,14 +74,27 @@ const LoginPage = () => {
       <div className="max-w-md w-full relative z-10 space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white mx-auto shadow-xl shadow-blue-500/25">
-            <Sparkles className="w-7 h-7" />
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">NextGen SaaS Billing & POS</h1>
+          {company.company_logo ? (
+            <img
+              src={getAssetUrl(company.company_logo)}
+              alt={company.company_name}
+              className="h-16 max-w-[180px] object-contain mx-auto mb-2 rounded-2xl bg-slate-900 p-2 border border-slate-800 shadow-xl"
+            />
+
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 flex items-center justify-center text-white mx-auto shadow-xl shadow-blue-500/25">
+              <Sparkles className="w-7 h-7" />
+            </div>
+          )}
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            {company.company_name || 'NextGen SaaS Billing & POS'}
+          </h1>
           <p className="text-xs text-slate-400">
-            {isSignUp ? 'Request New Staff Account (Pending Admin Approval)' : 'Select Role Account or Enter Credentials to Access Terminal'}
+            {company.company_tagline ? `${company.company_tagline} • ` : ''}
+            {isSignUp ? 'Request New Staff Account (Pending Admin Approval)' : 'Enter Credentials to Access Terminal'}
           </p>
         </div>
+
 
         {/* Login / Signup Card */}
         <div className="p-6 rounded-3xl glass-card border border-slate-800 shadow-2xl space-y-5">

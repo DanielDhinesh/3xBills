@@ -100,6 +100,8 @@ class InvoiceCreate(BaseModel):
     customer_email: Optional[str] = None
     payment_method: str = "CASH" # CASH, UPI_QR, CARD, CREDIT
     discount_amount: Decimal = Decimal("0.0")
+    branch_name: Optional[str] = None
+    terminal_name: Optional[str] = None
     items: List[InvoiceItemCreate]
 
 class InvoiceItemResponse(BaseModel):
@@ -128,6 +130,8 @@ class InvoiceResponse(BaseModel):
     profit_margin: Decimal
     payment_method: str
     payment_status: str
+    branch_name: Optional[str] = None
+    terminal_name: Optional[str] = None
     pdf_url: Optional[str] = None
     whatsapp_share_url: Optional[str] = None
     created_at: datetime

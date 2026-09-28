@@ -21,9 +21,9 @@ const MetricCard = ({ title, value, icon: Icon, trend, trendValue, color = "blue
   };
 
   return (
-    <div className={`p-3.5 sm:p-4 md:p-5 rounded-2xl bg-gradient-to-b ${colorMap[color] || colorMap.blue} border backdrop-blur-md relative overflow-hidden transition duration-300 hover:scale-[1.01] flex flex-col justify-between min-w-0`}>
+    <div className={`p-3.5 sm:p-4 md:p-5 rounded-2xl glass-card bg-gradient-to-b ${colorMap[color] || colorMap.blue} border backdrop-blur-md relative overflow-hidden transition duration-300 hover:scale-[1.01] flex flex-col justify-between min-w-0`}>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <span className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider leading-tight min-w-0 break-words">
+        <span className="text-[10px] sm:text-xs font-bold app-text-muted uppercase tracking-wider leading-tight min-w-0 break-words">
           {title}
         </span>
         {Icon && (
@@ -34,7 +34,7 @@ const MetricCard = ({ title, value, icon: Icon, trend, trendValue, color = "blue
       </div>
 
       <div className="flex items-baseline justify-between gap-1">
-        <h3 className="text-base sm:text-lg md:text-xl xl:text-2xl font-black text-white tracking-tight truncate max-w-full" title={String(value)}>
+        <h3 className="text-base sm:text-lg md:text-xl xl:text-2xl font-black app-text-primary tracking-tight truncate max-w-full" title={String(value)}>
           {value}
         </h3>
         {trend && (
@@ -46,7 +46,7 @@ const MetricCard = ({ title, value, icon: Icon, trend, trendValue, color = "blue
       </div>
 
       {subtitle && (
-        <p className="text-[10px] sm:text-xs text-slate-400 mt-1.5 truncate">{subtitle}</p>
+        <p className="text-[10px] sm:text-xs app-text-muted mt-1.5 truncate">{subtitle}</p>
       )}
     </div>
   );

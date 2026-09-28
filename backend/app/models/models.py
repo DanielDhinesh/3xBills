@@ -91,6 +91,8 @@ class Invoice(Base):
     profit_margin = Column(Numeric(10, 2), default=0.0)
     payment_method = Column(String, default="CASH") # CASH, UPI_QR, CARD, CREDIT
     payment_status = Column(String, default="PAID") # PAID, PENDING
+    branch_name = Column(String, nullable=True, default="Main Downtown Flagship")
+    terminal_name = Column(String, nullable=True, default="Terminal #01 - Main Billing Counter")
     pdf_filepath = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

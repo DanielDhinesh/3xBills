@@ -23,9 +23,11 @@ import {
 } from 'lucide-react';
 import { getProducts, getCategories, createInvoice, getPdfDownloadUrl } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useCompany } from '../context/CompanyContext';
 
 const POSTerminal = () => {
   const { user } = useAuth();
+  const { activeBranch, activeTerminal, formatCurrency, currencySymbol } = useCompany();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -361,6 +363,8 @@ const POSTerminal = () => {
         customer_phone: customerPhone,
         payment_method: paymentMethod,
         discount_amount: discountAmount,
+        branch_name: activeBranch,
+        terminal_name: activeTerminal,
         items: cart.map((item) => ({
           product_id: item.product_id,
           quantity: item.quantity
@@ -420,7 +424,7 @@ const POSTerminal = () => {
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <ShoppingBag className="w-3.5 h-3.5" /> Cart ({cart.length}) • ${grandTotal.toFixed(2)}
+            <ShoppingBag className="w-3.5 h-3.5" /> Cart ({cart.length}) • {formatCurrency(grandTotal)}
           </button>
         </div>
 
@@ -497,7 +501,7 @@ const POSTerminal = () => {
 
                       <div className="text-right shrink-0 flex items-center gap-3">
                         <div>
-                          <p className="text-xs font-black text-emerald-400">${parseFloat(p.selling_price).toFixed(2)}</p>
+                          <p className="text-xs font-black text-emerald-400">{formatCurrency(p.selling_price)}</p>
                           <p className={`text-[9px] font-bold ${p.stock_quantity <= p.min_stock_alert ? 'text-rose-400' : 'text-slate-400'}`}>
                             {p.stock_quantity} {p.unit} left
                           </p>
@@ -596,7 +600,7 @@ const POSTerminal = () => {
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between pt-1.5 border-t border-slate-800/60">
-                  <span className="text-xs font-extrabold text-blue-400">${parseFloat(product.selling_price).toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-blue-400">{formatCurrency(product.selling_price)}</span>
                   <span className="text-[10px] font-bold text-slate-400 bg-blue-500/10 hover:bg-blue-500 hover:text-white px-2 py-0.5 rounded transition">
                     + Add
                   </span>
@@ -633,7 +637,7 @@ const POSTerminal = () => {
                     {product.stock_quantity} {product.unit}
                   </span>
                   <span className="text-xs font-black text-emerald-400 font-mono">
-                    ${parseFloat(product.selling_price).toFixed(2)}
+                    {formatCurrency(product.selling_price)}
                   </span>
                   <button className="px-2 py-0.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white text-[10px] font-bold transition">
                     + Add
@@ -653,7 +657,7 @@ const POSTerminal = () => {
             >
               <span>View Cart ({cart.length} items)</span>
               <span className="flex items-center gap-1 font-mono text-emerald-300">
-                ${grandTotal.toFixed(2)} <ArrowRight className="w-4 h-4" />
+                {formatCurrency(grandTotal)} <ArrowRight className="w-4 h-4" />
               </span>
             </button>
           </div>
@@ -826,7 +830,7 @@ const POSTerminal = () => {
                             <span className="font-mono text-blue-400 text-[10px] px-1 py-0.5 bg-slate-950 rounded border border-slate-800">{p.barcode}</span>
                             <span>{p.name}</span>
                           </div>
-                          <span className="font-bold text-emerald-400">${parseFloat(p.selling_price).toFixed(2)}</span>
+                          <span className="font-bold text-emerald-400">{formatCurrency(p.selling_price)}</span>
                         </div>
                       ))
                     )}
@@ -860,7 +864,7 @@ const POSTerminal = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-white truncate">{item.name}</p>
                     <p className="text-[10px] text-slate-400">
-                      ${item.unit_price.toFixed(2)} x {item.quantity} = <span className="text-emerald-400 font-bold">${(item.unit_price * item.quantity).toFixed(2)}</span>
+                      {formatCurrency(item.unit_price)} x {item.quantity} = <span className="text-emerald-400 font-bold">{formatCurrency(item.unit_price * item.quantity)}</span>
                     </p>
                   </div>
 
@@ -915,14 +919,14 @@ const POSTerminal = () => {
           <div className="space-y-1 text-xs text-slate-300">
             <div className="flex justify-between">
               <span className="text-slate-400">Subtotal:</span>
-              <span className="font-semibold">${subtotal.toFixed(2)}</span>
+              <span className="font-semibold">{formatCurrency(subtotal)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Tax Breakdown (GST/VAT):</span>
-              <span className="font-semibold text-amber-400">+${taxTotal.toFixed(2)}</span>
+              <span className="font-semibold text-amber-400">+{formatCurrency(taxTotal)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Discount ($):</span>
+              <span className="text-slate-400">Discount ({currencySymbol}):</span>
               <input
                 type="number"
                 value={discountAmount}
@@ -932,7 +936,7 @@ const POSTerminal = () => {
             </div>
             <div className="flex justify-between text-sm font-black text-white border-t border-slate-800 pt-1.5">
               <span>Grand Total:</span>
-              <span className="text-emerald-400">${grandTotal.toFixed(2)}</span>
+              <span className="text-emerald-400">{formatCurrency(grandTotal)}</span>
             </div>
           </div>
 
@@ -967,7 +971,7 @@ const POSTerminal = () => {
             disabled={isProcessing || cart.length === 0}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 text-white font-extrabold text-xs shadow-lg shadow-blue-600/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isProcessing ? 'Processing Transaction...' : `Complete & Print Invoice ($${grandTotal.toFixed(2)})`}
+            {isProcessing ? 'Processing Transaction...' : `Complete & Print Invoice (${formatCurrency(grandTotal)})`}
           </button>
         </div>
       </div>
@@ -982,7 +986,7 @@ const POSTerminal = () => {
 
             <div>
               <h3 className="text-xl font-black text-white">Invoice #{completedInvoice.invoice_number}</h3>
-              <p className="text-xs text-slate-400 mt-1">Transaction Completed • ${parseFloat(completedInvoice.grand_total).toFixed(2)}</p>
+              <p className="text-xs text-slate-400 mt-1">Transaction Completed • {formatCurrency(completedInvoice.grand_total)}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-left">

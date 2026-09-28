@@ -7,8 +7,10 @@ import {
   getProducts, createProduct, updateProduct, restockProduct, deleteProduct, 
   getCategories, createCategory, getSuppliers, createSupplier 
 } from '../services/api';
+import { useCompany } from '../context/CompanyContext';
 
 const Inventory = () => {
+  const { formatCurrency } = useCompany();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -455,10 +457,10 @@ const Inventory = () => {
           </div>
           <div className="mt-2">
             <div className="text-lg sm:text-2xl font-black text-white">
-              ${metrics.totalInventoryCost.toFixed(2)}
+              {formatCurrency(metrics.totalInventoryCost)}
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Retail Valuation: <span className="text-emerald-400 font-bold">${metrics.totalRetailValue.toFixed(2)}</span>
+              Retail Valuation: <span className="text-emerald-400 font-bold">{formatCurrency(metrics.totalRetailValue)}</span>
             </p>
           </div>
         </div>
@@ -640,9 +642,9 @@ const Inventory = () => {
                         )}
                       </td>
                       <td className="p-4 text-slate-300">{p.category_name || 'General'}</td>
-                      <td className="p-4 text-slate-400">${parseFloat(p.cost_price).toFixed(2)}</td>
+                      <td className="p-4 text-slate-400">{formatCurrency(p.cost_price)}</td>
                       <td className="p-4 font-bold text-emerald-400 text-sm">
-                        ${parseFloat(p.selling_price).toFixed(2)}
+                        {formatCurrency(p.selling_price)}
                       </td>
                       <td className="p-4 text-slate-300">{parseFloat(p.tax_rate)}%</td>
                       <td className="p-4">

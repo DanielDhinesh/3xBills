@@ -22,8 +22,10 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { getInvoices, getPdfDownloadUrl, regenerateInvoiceBill } from '../services/api';
+import { useCompany } from '../context/CompanyContext';
 
 const InvoicesList = () => {
+  const { formatCurrency } = useCompany();
   const [invoices, setInvoices] = useState([]);
   const [search, setSearch] = useState('');
   
@@ -213,7 +215,7 @@ const InvoicesList = () => {
         <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase">Total Sales</p>
-            <p className="text-base sm:text-lg font-black text-emerald-400">${totalFilteredRevenue.toFixed(2)}</p>
+            <p className="text-base sm:text-lg font-black text-emerald-400">{formatCurrency(totalFilteredRevenue)}</p>
           </div>
           <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <DollarSign className="w-4 h-4" />
@@ -223,7 +225,7 @@ const InvoicesList = () => {
         <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase">Net Profit</p>
-            <p className="text-base sm:text-lg font-black text-indigo-400">${totalFilteredProfit.toFixed(2)}</p>
+            <p className="text-base sm:text-lg font-black text-indigo-400">{formatCurrency(totalFilteredProfit)}</p>
           </div>
           <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
             <TrendingUp className="w-4 h-4" />
@@ -233,7 +235,7 @@ const InvoicesList = () => {
         <div className="p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase">Tax Collected</p>
-            <p className="text-base sm:text-lg font-black text-amber-400">${totalFilteredTax.toFixed(2)}</p>
+            <p className="text-base sm:text-lg font-black text-amber-400">{formatCurrency(totalFilteredTax)}</p>
           </div>
           <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
             <CreditCard className="w-4 h-4" />
@@ -375,8 +377,8 @@ const InvoicesList = () => {
                         {inv.payment_method}
                       </span>
                     </td>
-                    <td className="p-4 font-bold text-emerald-400">${parseFloat(inv.grand_total).toFixed(2)}</td>
-                    <td className="p-4 text-slate-400">${parseFloat(inv.profit_margin).toFixed(2)}</td>
+                    <td className="p-4 font-bold text-emerald-400">{formatCurrency(inv.grand_total)}</td>
+                    <td className="p-4 text-slate-400">{formatCurrency(inv.profit_margin)}</td>
                     <td className="p-4 text-right flex items-center justify-end gap-2">
                       {/* Regenerate Lost Bill Button */}
                       <button
@@ -431,7 +433,7 @@ const InvoicesList = () => {
 
             <div>
               <h3 className="text-xl font-black text-white">Bill Regenerated Successfully!</h3>
-              <p className="text-xs text-slate-400 mt-1">Invoice #{regeneratedModal.invoice_number} • ${parseFloat(regeneratedModal.grand_total).toFixed(2)}</p>
+              <p className="text-xs text-slate-400 mt-1">Invoice #{regeneratedModal.invoice_number} • {formatCurrency(regeneratedModal.grand_total)}</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5 text-xs text-left">

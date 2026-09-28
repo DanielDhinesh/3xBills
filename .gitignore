@@ -35,6 +35,8 @@ backend/backups/*
 # Generated PDFs / Media Exports
 backend/app/invoices_pdf/*.pdf
 backend/app/reports_pdf/*.pdf
+backend/app/api/static/
+backend/app/static/
 
 # Environment variables
 .env

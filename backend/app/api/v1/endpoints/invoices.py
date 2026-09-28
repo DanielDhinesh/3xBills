@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.models.models import Invoice, InvoiceItem, Product, Customer, User
+from app.models.models import Invoice, InvoiceItem, Product, Customer, User, SystemSetting
 from app.schemas.schemas import InvoiceCreate, InvoiceResponse, InvoiceItemResponse
 from app.services.pdf_service import generate_invoice_pdf
 from app.services.whatsapp_email_service import generate_whatsapp_bill_url, send_email_notification
@@ -23,6 +23,26 @@ def build_pdf_url(request: Request, invoice_id: str) -> str:
     base_url = str(request.base_url).rstrip("/")
     return f"{base_url}{settings.API_V1_STR}/invoices/{invoice_id}/pdf"
 
+async def get_db_company_branding(db: AsyncSession) -> dict:
+    res = await db.execute(select(SystemSetting))
+    db_settings = {s.key: s.value for s in res.scalars().all()}
+    return {
+        "company_name": db_settings.get("company_name", settings.SHOP_NAME),
+        "company_address": db_settings.get("company_address", settings.SHOP_ADDRESS),
+        "company_phone": db_settings.get("company_phone", settings.SHOP_PHONE),
+        "company_email": db_settings.get("company_email", settings.ADMIN_EMAIL),
+        "tax_id": db_settings.get("tax_id", "GSTIN: 27AAAAA0000A1Z5"),
+        "company_logo": db_settings.get("company_logo", ""),
+        "google_rating_url": db_settings.get("google_rating_url", settings.GOOGLE_RATING_URL),
+        "default_upi_payment_id": db_settings.get("default_upi_payment_id", settings.DEFAULT_UPI_PAYMENT_ID),
+        "invoice_footer_note": db_settings.get("invoice_footer_note", "Thank you for shopping with us! Items can be exchanged within 7 days with valid receipt."),
+        "currency_symbol": db_settings.get("currency_symbol", "$"),
+        "currency_code": db_settings.get("currency_code", "USD"),
+        "active_branch_name": db_settings.get("active_branch_name", "Main Downtown Flagship"),
+        "active_terminal_name": db_settings.get("active_terminal_name", "Counter #01 - Main Cash Register")
+    }
+
+
 @router.post("/invoices", response_model=InvoiceResponse)
 async def create_invoice(
     invoice_in: InvoiceCreate,
@@ -33,6 +53,10 @@ async def create_invoice(
     if not invoice_in.items:
         raise HTTPException(status_code=400, detail="Invoice must contain at least one item.")
         
+    branding = await get_db_company_branding(db)
+    branch_to_set = invoice_in.branch_name or branding["active_branch_name"]
+    terminal_to_set = invoice_in.terminal_name or branding["active_terminal_name"]
+
     # 1. Resolve or Create Customer
     customer = None
     if invoice_in.customer_phone:
@@ -127,7 +151,9 @@ async def create_invoice(
         grand_total=grand_total,
         profit_margin=profit_margin,
         payment_method=invoice_in.payment_method,
-        payment_status="PAID"
+        payment_status="PAID",
+        branch_name=branch_to_set,
+        terminal_name=terminal_to_set
     )
     db.add(new_invoice)
     await db.flush()
@@ -152,11 +178,14 @@ async def create_invoice(
         "customer_name": customer.name if customer else "Retail Walk-in",
         "customer_phone": customer.phone if customer else "",
         "payment_method": invoice_in.payment_method,
+        "branch_name": branch_to_set,
+        "terminal_name": terminal_to_set,
         "items": [item.model_dump() for item in response_items],
         "subtotal": subtotal,
         "tax_total": tax_total,
         "discount_amount": discount,
-        "grand_total": grand_total
+        "grand_total": grand_total,
+        **branding
     }
     
     generate_invoice_pdf(pdf_data, pdf_filepath)
@@ -171,14 +200,14 @@ async def create_invoice(
             customer_name=customer.name,
             invoice_number=invoice_number,
             grand_total=str(grand_total),
-            shop_name=settings.SHOP_NAME
+            shop_name=branding["company_name"]
         )
 
     if customer and customer.email:
         background_tasks.add_task(
             send_email_notification,
             to_email=customer.email,
-            subject=f"[{settings.SHOP_NAME}] Invoice #{invoice_number}",
+            subject=f"[{branding['company_name']}] Invoice #{invoice_number}",
             body_text=f"<h3>Thank you for your purchase!</h3><p>Find attached your official digital tax invoice receipt #{invoice_number}.</p>",
             attachment_filepath=pdf_filepath
         )
@@ -198,6 +227,8 @@ async def create_invoice(
         profit_margin=profit_margin,
         payment_method=invoice_in.payment_method,
         payment_status="PAID",
+        branch_name=branch_to_set,
+        terminal_name=terminal_to_set,
         pdf_url=full_pdf_url,
         whatsapp_share_url=whatsapp_url,
         created_at=new_invoice.created_at,
@@ -212,6 +243,7 @@ async def list_invoices(request: Request, db: AsyncSession = Depends(get_db)):
         .order_by(Invoice.created_at.desc())
     )
     invoices = result.scalars().all()
+    branding = await get_db_company_branding(db)
     
     res = []
     for inv in invoices:
@@ -236,7 +268,7 @@ async def list_invoices(request: Request, db: AsyncSession = Depends(get_db)):
                 customer_name=inv.customer.name,
                 invoice_number=inv.invoice_number,
                 grand_total=str(inv.grand_total),
-                shop_name=settings.SHOP_NAME
+                shop_name=branding["company_name"]
             )
 
         full_pdf_url = build_pdf_url(request, inv.id)
@@ -254,6 +286,8 @@ async def list_invoices(request: Request, db: AsyncSession = Depends(get_db)):
             profit_margin=inv.profit_margin,
             payment_method=inv.payment_method,
             payment_status=inv.payment_status,
+            branch_name=inv.branch_name or branding["active_branch_name"],
+            terminal_name=inv.terminal_name or branding["active_terminal_name"],
             pdf_url=full_pdf_url,
             whatsapp_share_url=wa_url,
             created_at=inv.created_at,
@@ -293,6 +327,7 @@ async def regenerate_lost_invoice_bill(invoice_id: str, request: Request, db: As
             line_profit=item.line_profit
         ))
 
+    branding = await get_db_company_branding(db)
     pdf_data = {
         "invoice_number": invoice.invoice_number,
         "created_at": invoice.created_at.strftime("%Y-%m-%d %H:%M"),
@@ -303,7 +338,8 @@ async def regenerate_lost_invoice_bill(invoice_id: str, request: Request, db: As
         "subtotal": invoice.subtotal,
         "tax_total": invoice.tax_total,
         "discount_amount": invoice.discount_amount,
-        "grand_total": invoice.grand_total
+        "grand_total": invoice.grand_total,
+        **branding
     }
 
     generate_invoice_pdf(pdf_data, pdf_filepath)
@@ -317,7 +353,7 @@ async def regenerate_lost_invoice_bill(invoice_id: str, request: Request, db: As
             customer_name=invoice.customer.name,
             invoice_number=invoice.invoice_number,
             grand_total=str(invoice.grand_total),
-            shop_name=settings.SHOP_NAME
+            shop_name=branding["company_name"]
         )
 
     full_pdf_url = build_pdf_url(request, invoice.id)

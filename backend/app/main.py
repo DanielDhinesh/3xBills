@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import uvicorn
@@ -20,6 +22,10 @@ def scheduled_backup_job():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure uploads directory exists
+    static_upload_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "static", "uploads"))
+    os.makedirs(static_upload_dir, exist_ok=True)
+
     # Startup: Create tables & seed data
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -53,6 +59,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount Static Files for Uploads (e.g. company logo)
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # Include Routers
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["Authentication"])
 app.include_router(products.router, prefix=settings.API_V1_STR, tags=["Products & Inventory"])
@@ -75,3 +86,4 @@ def root():
 if __name__ == "__main__":
     # NextGen Retail Billing Engine v2.0 - All Settings Routes Loaded Cleanly
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+

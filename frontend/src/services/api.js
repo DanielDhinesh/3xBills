@@ -34,12 +34,21 @@ api.interceptors.response.use(
   }
 );
 
+export const getAssetUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
+  const hostname = window.location.hostname || 'localhost';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `http://${hostname}:8000${cleanUrl}`;
+};
+
 export const getPdfDownloadUrl = (pdfUrl) => {
   if (!pdfUrl) return '#';
   if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) return pdfUrl;
   const hostname = window.location.hostname || 'localhost';
   return `http://${hostname}:8000${pdfUrl}`;
 };
+
 
 export const getFinancialReportExportUrl = (startDate = '', endDate = '') => {
   const hostname = window.location.hostname || 'localhost';
@@ -71,13 +80,18 @@ export const createUser = (userData) => api.post('/auth/users', userData);
 export const updateUser = (id, userData) => api.put(`/auth/users/${id}`, userData);
 export const toggleUserStatus = (id) => api.delete(`/auth/users/${id}`);
 
-// System Settings & Email Automation Endpoints
+// System Settings, Branding & Email Automation Endpoints
+export const getPublicBranding = () => api.get('/settings/public');
 export const getSystemSettings = () => api.get('/settings');
 export const updateSystemSettings = (data) => api.put('/settings', data);
+export const uploadCompanyLogo = (formData) => api.post('/settings/upload-logo', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
 export const testEmailConnection = (recipient_email) => api.post('/settings/test-email', { recipient_email });
 export const sendEmailReport = (report_type = 'WEEKLY', recipient_email = '') => 
   api.post('/settings/send-report', { report_type, recipient_email });
 export const sendLowStockAlertEmail = () => api.post('/settings/send-low-stock-alert');
+
 
 // Dashboard & Financial Analytics Endpoints
 export const getDashboardKPIs = (startDate = '', endDate = '') => 

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart as RePieChart, Pie, Cell } from 'recharts';
 import MetricCard from '../components/MetricCard';
+import { useCompany } from '../context/CompanyContext';
 import { 
   getDashboardKPIs, 
   getSalesChartData, 
@@ -33,6 +34,7 @@ import {
 } from '../services/api';
 
 const Dashboard = () => {
+  const { formatCurrency, currencySymbol } = useCompany();
   const [timeframe, setTimeframe] = useState('ALL');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -120,10 +122,10 @@ const Dashboard = () => {
       {/* Header & Timeframe Selector Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
-            Executive Financial Dashboard <Sparkles className="w-5 h-5 text-blue-400" />
+          <h1 className="text-2xl font-black app-text-primary tracking-tight flex items-center gap-2">
+            Executive Financial Dashboard <Sparkles className="w-5 h-5 text-blue-500" />
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Real-time Retail Analytics, Cashier Audit Logs, Profit & Loss (P&L) & Financial Statements</p>
+          <p className="text-xs app-text-muted mt-1">Real-time Retail Analytics, Cashier Audit Logs, Profit & Loss (P&L) & Financial Statements</p>
         </div>
 
         {/* Action Controls & Report Export */}
@@ -140,7 +142,7 @@ const Dashboard = () => {
       </div>
 
       {/* Timeframe Filter Bar */}
-      <div className="p-4 rounded-2xl glass-card border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+      <div className="p-4 rounded-2xl glass-card border app-border flex flex-wrap items-center justify-between gap-3">
         {/* Quick Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
@@ -157,7 +159,7 @@ const Dashboard = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
                 timeframe === tf.key
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                  : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                  : 'app-card-inner border app-border app-text-muted hover:app-text-primary'
               }`}
             >
               {tf.label}
@@ -167,24 +169,24 @@ const Dashboard = () => {
 
         {/* Custom Date Pickers */}
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">From:</span>
+          <div className="flex items-center gap-1.5 app-card-inner px-3 py-1.5 rounded-xl border app-border text-xs">
+            <Calendar className="w-3.5 h-3.5 app-text-muted" />
+            <span className="app-text-muted">From:</span>
             <input
               type="date"
               value={startDate}
               onChange={(e) => { setStartDate(e.target.value); setTimeframe('CUSTOM'); }}
-              className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
+              className="bg-transparent app-text-primary font-bold outline-none cursor-pointer text-xs"
             />
           </div>
-          <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-400">To:</span>
+          <div className="flex items-center gap-1.5 app-card-inner px-3 py-1.5 rounded-xl border app-border text-xs">
+            <Calendar className="w-3.5 h-3.5 app-text-muted" />
+            <span className="app-text-muted">To:</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => { setEndDate(e.target.value); setTimeframe('CUSTOM'); }}
-              className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs"
+              className="bg-transparent app-text-primary font-bold outline-none cursor-pointer text-xs"
             />
           </div>
         </div>
@@ -194,35 +196,35 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4">
         <MetricCard
           title="Gross Revenue"
-          value={`$${parseFloat(kpi.total_revenue).toFixed(2)}`}
+          value={formatCurrency(kpi.total_revenue)}
           icon={DollarSign}
           color="blue"
           subtitle="Total Sales Income"
         />
         <MetricCard
           title="Net Profit"
-          value={`$${parseFloat(kpi.net_profit).toFixed(2)}`}
+          value={formatCurrency(kpi.net_profit)}
           icon={TrendingUp}
           color="emerald"
           subtitle={`Margin: ${parseFloat(kpi.profit_margin_percentage).toFixed(1)}%`}
         />
         <MetricCard
           title="Total Inventory Cost"
-          value={`$${parseFloat(kpi.total_inventory_cost || 0).toFixed(2)}`}
+          value={formatCurrency(kpi.total_inventory_cost || 0)}
           icon={PackageCheck}
           color="indigo"
           subtitle="Stock Valuation (Cost)"
         />
         <MetricCard
           title="Cost of Goods (COGS)"
-          value={`$${parseFloat(kpi.cogs).toFixed(2)}`}
+          value={formatCurrency(kpi.cogs)}
           icon={Receipt}
           color="amber"
           subtitle="Sold Products Cost"
         />
         <MetricCard
           title="Avg Order Value (AOV)"
-          value={`$${parseFloat(kpi.avg_order_value).toFixed(2)}`}
+          value={formatCurrency(kpi.avg_order_value)}
           icon={Percent}
           color="purple"
           subtitle="Revenue per transaction"
@@ -244,32 +246,32 @@ const Dashboard = () => {
       </div>
 
       {/* Cashier Audit Logs Section */}
-      <div className="p-6 rounded-2xl glass-card border border-slate-800 space-y-4">
+      <div className="p-6 rounded-2xl glass-card border app-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-emerald-400" /> Cashier Sales Audit Logs & Register Performance
+            <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-emerald-500" /> Cashier Sales Audit Logs & Register Performance
             </h2>
-            <p className="text-xs text-slate-400">Track individual cashier sales performance, total orders processed, and average ticket size</p>
+            <p className="text-xs app-text-muted">Track individual cashier sales performance, total orders processed, and average ticket size</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {cashierLogs.map((c) => (
-            <div key={c.cashier_id} className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+            <div key={c.cashier_id} className="p-4 rounded-xl app-card-inner border app-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-500/20">
                   {c.full_name.substring(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white">{c.full_name}</h4>
-                  <p className="text-[10px] text-slate-400">{c.role} • {c.total_invoices} orders</p>
+                  <h4 className="text-xs font-bold app-text-primary">{c.full_name}</h4>
+                  <p className="text-[10px] app-text-muted">{c.role} • {c.total_invoices} orders</p>
                 </div>
               </div>
 
               <div className="text-right">
-                <p className="text-xs font-black text-emerald-400">${parseFloat(c.total_sales).toFixed(2)}</p>
-                <p className="text-[10px] text-slate-400">Avg: ${parseFloat(c.avg_sale_value).toFixed(2)}</p>
+                <p className="text-xs font-black text-emerald-500">{formatCurrency(c.total_sales)}</p>
+                <p className="text-[10px] app-text-muted">Avg: {formatCurrency(c.avg_sale_value)}</p>
               </div>
             </div>
           ))}
@@ -278,13 +280,13 @@ const Dashboard = () => {
 
       {/* Revenue & Net Profit Trend Timeline Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 p-6 rounded-2xl glass-card border border-slate-800">
+        <div className="lg:col-span-8 p-6 rounded-2xl glass-card border app-border">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-400" /> Revenue vs Profit Financial Timeline
+              <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-emerald-500" /> Revenue vs Profit Financial Timeline
               </h2>
-              <p className="text-xs text-slate-400">Daily financial trajectory for selected timeframe</p>
+              <p className="text-xs app-text-muted">Daily financial trajectory for selected timeframe</p>
             </div>
           </div>
 
@@ -309,36 +311,36 @@ const Dashboard = () => {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="date" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
-                <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px' }} />
-                <Area type="monotone" dataKey="sales" name="Gross Revenue ($)" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
-                <Area type="monotone" dataKey="profit" name="Net Profit ($)" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#profitGrad)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-card-border)" />
+                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                <YAxis stroke="var(--text-muted)" fontSize={11} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--bg-card-border)', borderRadius: '12px', color: 'var(--text-primary)' }} itemStyle={{ color: 'var(--text-primary)' }} labelStyle={{ color: 'var(--text-primary)' }} />
+                <Area type="monotone" dataKey="sales" name={`Gross Revenue (${currencySymbol})`} stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#salesGrad)" />
+                <Area type="monotone" dataKey="profit" name={`Net Profit (${currencySymbol})`} stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#profitGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Payment Methods Distribution Widget */}
-        <div className="lg:col-span-4 p-6 rounded-2xl glass-card border border-slate-800 flex flex-col justify-between">
+        <div className="lg:col-span-4 p-6 rounded-2xl glass-card border app-border flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-white mb-1 flex items-center gap-2">
-              <PieChart className="w-4 h-4 text-amber-400" /> Payment Distribution
+            <h2 className="text-base font-bold app-text-primary mb-1 flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-amber-500" /> Payment Distribution
             </h2>
-            <p className="text-xs text-slate-400 mb-4">Breakdown by cash, UPI QR & cards</p>
+            <p className="text-xs app-text-muted mb-4">Breakdown by cash, UPI QR & cards</p>
 
             <div className="space-y-3">
               {paymentBreakdown.map((pm, idx) => (
-                <div key={pm.payment_method} className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
+                <div key={pm.payment_method} className="p-3 rounded-xl app-card-inner border app-border flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
                     <div>
-                      <p className="text-xs font-bold text-white">{pm.payment_method}</p>
-                      <p className="text-[10px] text-slate-400">{pm.transaction_count} transactions</p>
+                      <p className="text-xs font-bold app-text-primary">{pm.payment_method}</p>
+                      <p className="text-[10px] app-text-muted">{pm.transaction_count} transactions</p>
                     </div>
                   </div>
-                  <span className="text-xs font-extrabold text-blue-400">${parseFloat(pm.total_amount).toFixed(2)}</span>
+                  <span className="text-xs font-extrabold text-blue-500">{formatCurrency(pm.total_amount)}</span>
                 </div>
               ))}
             </div>
@@ -347,19 +349,19 @@ const Dashboard = () => {
       </div>
 
       {/* Monthly Wise Breakdown Financial Table */}
-      <div className="p-6 rounded-2xl glass-card border border-slate-800 space-y-4">
+      <div className="p-6 rounded-2xl glass-card border app-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <FileSpreadsheet className="w-4 h-4 text-purple-400" /> Month-by-Month Financial Performance Report
+            <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-purple-500" /> Month-by-Month Financial Performance Report
             </h2>
-            <p className="text-xs text-slate-400">Monthly breakdown of revenue, COGS, net profit, tax, and order metrics</p>
+            <p className="text-xs app-text-muted">Monthly breakdown of revenue, COGS, net profit, tax, and order metrics</p>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-800">
+        <div className="overflow-x-auto rounded-xl border app-border">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-900 border-b border-slate-800 text-slate-400 uppercase font-semibold">
+            <thead className="app-table-header uppercase font-semibold">
               <tr>
                 <th className="p-3.5">Month Period</th>
                 <th className="p-3.5">Gross Revenue</th>
@@ -370,22 +372,22 @@ const Dashboard = () => {
                 <th className="p-3.5 text-right">Avg Order Value (AOV)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
+            <tbody className="divide-y divide-slate-800/40 font-medium">
               {monthlyReports.length > 0 ? (
                 monthlyReports.map((row) => (
-                  <tr key={row.month_str} className="hover:bg-slate-900/40 transition">
-                    <td className="p-3.5 font-bold font-mono text-blue-400">{row.month_str}</td>
-                    <td className="p-3.5 font-bold text-white">${parseFloat(row.gross_revenue).toFixed(2)}</td>
-                    <td className="p-3.5 text-amber-400">${parseFloat(row.cogs).toFixed(2)}</td>
-                    <td className="p-3.5 font-bold text-emerald-400">${parseFloat(row.net_profit).toFixed(2)}</td>
-                    <td className="p-3.5 text-slate-300">${parseFloat(row.tax_collected).toFixed(2)}</td>
-                    <td className="p-3.5 text-slate-300">{row.total_invoices}</td>
-                    <td className="p-3.5 text-right font-bold text-purple-300">${parseFloat(row.avg_order_value).toFixed(2)}</td>
+                  <tr key={row.month_str} className="app-table-row transition">
+                    <td className="p-3.5 font-bold font-mono text-blue-500">{row.month_str}</td>
+                    <td className="p-3.5 font-bold app-text-primary">{formatCurrency(row.gross_revenue)}</td>
+                    <td className="p-3.5 text-amber-500">{formatCurrency(row.cogs)}</td>
+                    <td className="p-3.5 font-bold text-emerald-500">{formatCurrency(row.net_profit)}</td>
+                    <td className="p-3.5 app-text-secondary">{formatCurrency(row.tax_collected)}</td>
+                    <td className="p-3.5 app-text-secondary">{row.total_invoices}</td>
+                    <td className="p-3.5 text-right font-bold text-purple-400">{formatCurrency(row.avg_order_value)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-slate-500">
+                  <td colSpan={7} className="p-6 text-center app-text-muted">
                     No monthly records generated yet.
                   </td>
                 </tr>
