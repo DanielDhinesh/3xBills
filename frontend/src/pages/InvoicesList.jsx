@@ -10,7 +10,7 @@ import {
   CheckCircle2,
   Calendar,
   Filter,
-  DollarSign,
+  Banknote,
   TrendingUp,
   CreditCard,
   QrCode,
@@ -187,7 +187,7 @@ const InvoicesList = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="page-container space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -218,7 +218,7 @@ const InvoicesList = () => {
             <p className="text-base sm:text-lg font-black text-emerald-400">{formatCurrency(totalFilteredRevenue)}</p>
           </div>
           <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <DollarSign className="w-4 h-4" />
+            <Banknote className="w-4 h-4" />
           </div>
         </div>
 

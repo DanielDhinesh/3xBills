@@ -39,7 +39,9 @@ async def get_db_company_branding(db: AsyncSession) -> dict:
         "currency_symbol": db_settings.get("currency_symbol", "$"),
         "currency_code": db_settings.get("currency_code", "USD"),
         "active_branch_name": db_settings.get("active_branch_name", "Main Downtown Flagship"),
-        "active_terminal_name": db_settings.get("active_terminal_name", "Counter #01 - Main Cash Register")
+        "active_terminal_name": db_settings.get("active_terminal_name", "Counter #01 - Main Cash Register"),
+        # Include branches list so we can resolve branch-specific address for each bill
+        "branches_list_json": db_settings.get("branches_list_json", "[]"),
     }
 
 
@@ -172,6 +174,19 @@ async def create_invoice(
     pdf_filename = f"{invoice_number}.pdf"
     pdf_filepath = os.path.join(PDF_DIR, pdf_filename)
     
+    # ── Resolve branch-specific address & phone for the bill ──────────────
+    import json as _json
+    branch_address = branding["company_address"]
+    branch_phone   = branding["company_phone"]
+    try:
+        branches = _json.loads(branding.get("branches_list_json") or "[]")
+        matched = next((b for b in branches if b.get("name") == branch_to_set), None)
+        if matched:
+            branch_address = matched.get("address") or branch_address
+            branch_phone   = matched.get("phone")   or branch_phone
+    except Exception:
+        pass  # fall back to company default
+
     pdf_data = {
         "invoice_number": invoice_number,
         "created_at": new_invoice.created_at.strftime("%Y-%m-%d %H:%M"),
@@ -185,7 +200,10 @@ async def create_invoice(
         "tax_total": tax_total,
         "discount_amount": discount,
         "grand_total": grand_total,
-        **branding
+        # Merge branding but override address/phone with the selected branch's values
+        **branding,
+        "company_address": branch_address,
+        "company_phone": branch_phone,
     }
     
     generate_invoice_pdf(pdf_data, pdf_filepath)
@@ -328,21 +346,41 @@ async def regenerate_lost_invoice_bill(invoice_id: str, request: Request, db: As
         ))
 
     branding = await get_db_company_branding(db)
+    inv_branch = invoice.branch_name or branding["active_branch_name"]
+
+    # ── Resolve the branch-specific address & phone ──────────────────────
+    import json as _json
+    branch_address = branding["company_address"]
+    branch_phone   = branding["company_phone"]
+    try:
+        branches = _json.loads(branding.get("branches_list_json") or "[]")
+        matched = next((b for b in branches if b.get("name") == inv_branch), None)
+        if matched:
+            branch_address = matched.get("address") or branch_address
+            branch_phone   = matched.get("phone")   or branch_phone
+    except Exception:
+        pass
+
     pdf_data = {
         "invoice_number": invoice.invoice_number,
         "created_at": invoice.created_at.strftime("%Y-%m-%d %H:%M"),
         "customer_name": invoice.customer.name if invoice.customer else "Retail Walk-in",
         "customer_phone": invoice.customer.phone if invoice.customer else "",
         "payment_method": invoice.payment_method,
+        "branch_name": inv_branch,
+        "terminal_name": invoice.terminal_name or branding["active_terminal_name"],
         "items": [item.model_dump() for item in items_res],
         "subtotal": invoice.subtotal,
         "tax_total": invoice.tax_total,
         "discount_amount": invoice.discount_amount,
         "grand_total": invoice.grand_total,
-        **branding
+        **branding,
+        "company_address": branch_address,
+        "company_phone": branch_phone,
     }
 
     generate_invoice_pdf(pdf_data, pdf_filepath)
+
     invoice.pdf_filepath = pdf_filepath
     await db.commit()
 

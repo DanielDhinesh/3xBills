@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Package, Plus, Search, AlertTriangle, Barcode, Trash2, Edit3, Tag, Truck, RefreshCw,
-  DollarSign, TrendingUp, Filter, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, Layers, CheckCircle2, AlertCircle, X
+  Banknote, TrendingUp, Filter, RotateCcw, ArrowUpDown, ArrowUp, ArrowDown, Layers, CheckCircle2, AlertCircle, X
 } from 'lucide-react';
 import { 
   getProducts, createProduct, updateProduct, restockProduct, deleteProduct, 
@@ -405,7 +405,7 @@ const Inventory = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 space-y-5 max-w-full">
+    <div className="page-container space-y-5">
       {/* Page Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -439,7 +439,7 @@ const Inventory = () => {
           </div>
           <div className="mt-2">
             <div className="text-lg sm:text-2xl font-black text-amber-300">
-              ${metrics.highestPriceItem ? parseFloat(metrics.highestPriceItem.selling_price).toFixed(2) : '0.00'}
+              {metrics.highestPriceItem ? formatCurrency(metrics.highestPriceItem.selling_price) : formatCurrency(0)}
             </div>
             <p className="text-xs text-slate-300 font-medium truncate mt-0.5">
               {metrics.highestPriceItem ? metrics.highestPriceItem.name : 'No items'}
@@ -452,7 +452,7 @@ const Inventory = () => {
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-400">Total Stock Cost</span>
             <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
-              <DollarSign className="w-4 h-4" />
+              <Banknote className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-2">

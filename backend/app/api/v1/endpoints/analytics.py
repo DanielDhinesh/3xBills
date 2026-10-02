@@ -9,7 +9,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from app.core.database import get_db
-from app.models.models import Invoice, InvoiceItem, Product, SystemLicense, User
+from app.models.models import Invoice, InvoiceItem, Product, SystemLicense, User, SystemSetting
 from app.schemas.schemas import DashboardKPI, SalesChartPoint, TopProductItem, MonthlyReportRow, PaymentMethodBreakdown, CashierPerformanceRow
 from app.core.licensing import get_machine_fingerprint, verify_license_token
 from app.services.report_export_service import generate_financial_statement_pdf
@@ -282,12 +282,19 @@ async def export_financial_report(
     elif start_date:
         timeframe_str = f"From {start_date} onwards"
 
+    res_settings = await db.execute(select(SystemSetting))
+    db_settings = {s.key: s.value for s in res_settings.scalars().all()}
+
     meta = {
         "timeframe_label": timeframe_str,
         "total_revenue": kpi.total_revenue,
         "net_profit": kpi.net_profit,
         "cogs": kpi.cogs,
-        "tax_collected": kpi.tax_collected
+        "tax_collected": kpi.tax_collected,
+        "currency_symbol": db_settings.get("currency_symbol", "$"),
+        "company_name": db_settings.get("company_name"),
+        "company_address": db_settings.get("company_address"),
+        "company_phone": db_settings.get("company_phone")
     }
 
     os.makedirs(REPORTS_DIR, exist_ok=True)

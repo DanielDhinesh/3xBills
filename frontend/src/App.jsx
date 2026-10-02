@@ -20,6 +20,7 @@ import AdminSettings from './pages/AdminSettings';
 const ProtectedLayout = () => {
   const { user, loading } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   if (loading) {
     return (
@@ -35,9 +36,20 @@ const ProtectedLayout = () => {
   }
 
   return (
-    <div className="flex h-screen app-bg-main overflow-hidden selection:bg-blue-500 selection:text-white">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+    /* Use 100dvh so it works correctly at any browser zoom level */
+    <div
+      className="flex app-bg-main overflow-hidden selection:bg-blue-500 selection:text-white"
+      style={{ height: '100dvh' }}
+    >
+      <Sidebar
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
+      />
+
+      {/* Right column: navbar + page content */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Navbar onToggleMobileMenu={() => setMobileOpen(!mobileOpen)} />
         <main className="flex-1 overflow-y-auto app-bg-main">
           <Routes>
@@ -75,4 +87,3 @@ function App() {
 }
 
 export default App;
-

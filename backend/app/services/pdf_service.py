@@ -6,6 +6,8 @@ from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 from app.core.config import settings
 
 def generate_qr_code_image(data: str) -> BytesIO:
@@ -48,11 +50,21 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     branch_name = invoice_data.get("branch_name") or "Main Downtown Flagship"
     terminal_name = invoice_data.get("terminal_name") or "Counter #01 - Main Billing Counter"
 
+    font_path = os.path.join(os.path.dirname(__file__), "..", "static", "fonts")
+    try:
+        pdfmetrics.registerFont(TTFont('Unicode', os.path.join(font_path, 'DejaVuSans.ttf')))
+        pdfmetrics.registerFont(TTFont('Unicode-Bold', os.path.join(font_path, 'DejaVuSans-Bold.ttf')))
+        font_regular = 'Unicode'
+        font_bold = 'Unicode-Bold'
+    except Exception:
+        font_regular = 'Helvetica'
+        font_bold = 'Helvetica-Bold'
+
     # Custom styles
     sub_title_style = ParagraphStyle(
         'ShopSubTitle',
         parent=styles['Normal'],
-        fontName='Helvetica',
+        fontName=font_regular,
         fontSize=9.5,
         textColor=colors.HexColor('#475569'),
         leading=13
@@ -61,7 +73,7 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     meta_style = ParagraphStyle(
         'MetaStyle',
         parent=styles['Normal'],
-        fontName='Helvetica-Bold',
+        fontName=font_bold,
         fontSize=9,
         textColor=colors.HexColor('#334155'),
         alignment=2 # Right aligned
@@ -70,7 +82,7 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     footer_style = ParagraphStyle(
         'FooterStyle',
         parent=styles['Normal'],
-        fontName='Helvetica-Oblique',
+        fontName=font_regular,
         fontSize=8,
         textColor=colors.HexColor('#64748b'),
         alignment=1 # Centered
@@ -152,7 +164,8 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     items_table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0f172a')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), font_bold),
+        ('FONTNAME', (0,1), (-1,-1), font_regular),
         ('FONTSIZE', (0,0), (-1,0), 9),
         ('ALIGN', (1,0), (-1,-1), 'RIGHT'),
         ('ALIGN', (0,0), (0,-1), 'LEFT'),
@@ -179,8 +192,8 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     totals_table = Table(totals_data, colWidths=[5.5*inch, 1.5*inch])
     totals_table.setStyle(TableStyle([
         ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
-        ('FONTNAME', (0,0), (-1,-2), 'Helvetica'),
-        ('FONTNAME', (0,-1), (-1,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,-2), font_regular),
+        ('FONTNAME', (0,-1), (-1,-1), font_bold),
         ('FONTSIZE', (0,-1), (-1,-1), 11),
         ('TEXTCOLOR', (0,-1), (-1,-1), colors.HexColor('#0f172a')),
         ('TOPPADDING', (0,0), (-1,-1), 3),
@@ -200,7 +213,7 @@ def generate_invoice_pdf(invoice_data: dict, output_filepath: str) -> str:
     qr_caption_style = ParagraphStyle(
         'QRCaption',
         parent=styles['Normal'],
-        fontName='Helvetica-Bold',
+        fontName=font_bold,
         fontSize=8,
         alignment=1, # Centered
         textColor=colors.HexColor('#334155')

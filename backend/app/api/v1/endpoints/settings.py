@@ -311,7 +311,11 @@ async def email_sales_report(
         "total_revenue": total_sales,
         "net_profit": net_profit,
         "cogs": max(0, total_sales - net_profit),
-        "tax_collected": tax_total
+        "tax_collected": tax_total,
+        "currency_symbol": db_settings.get("currency_symbol", "$"),
+        "company_name": db_settings.get("company_name"),
+        "company_address": db_settings.get("company_address"),
+        "company_phone": db_settings.get("company_phone")
     }
 
     generate_financial_statement_pdf(

@@ -506,15 +506,7 @@ const AdminSettings = () => {
                       />
                     </label>
                   </div>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Or enter logo image URL (http://...)"
-                      value={brandingForm.company_logo}
-                      onChange={(e) => setBrandingForm({ ...brandingForm, company_logo: e.target.value })}
-                      className="w-full p-2.5 rounded-xl glass-input text-xs font-mono"
-                    />
-                  </div>
+
                 </div>
               </div>
             </div>

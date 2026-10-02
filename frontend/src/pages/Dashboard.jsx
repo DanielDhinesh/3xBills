@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  DollarSign, 
+  Banknote,
   TrendingUp, 
   ShoppingCart, 
   AlertTriangle, 
@@ -17,8 +17,7 @@ import {
   CreditCard,
   QrCode,
   FileSpreadsheet,
-  UserCheck,
-  BadgeDollarSign
+  UserCheck
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart as RePieChart, Pie, Cell } from 'recharts';
 import MetricCard from '../components/MetricCard';
@@ -118,14 +117,14 @@ const Dashboard = () => {
   const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-5 xl:p-6 space-y-5 xl:space-y-6 max-w-screen-2xl mx-auto w-full">
       {/* Header & Timeframe Selector Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 xl:gap-4">
         <div>
-          <h1 className="text-2xl font-black app-text-primary tracking-tight flex items-center gap-2">
+          <h1 className="text-xl xl:text-2xl font-black app-text-primary tracking-tight flex items-center gap-2">
             Executive Financial Dashboard <Sparkles className="w-5 h-5 text-blue-500" />
           </h1>
-          <p className="text-xs app-text-muted mt-1">Real-time Retail Analytics, Cashier Audit Logs, Profit & Loss (P&L) & Financial Statements</p>
+          <p className="text-xs app-text-muted mt-1">Real-time Retail Analytics, Cashier Audit Logs, Profit &amp; Loss (P&amp;L) &amp; Financial Statements</p>
         </div>
 
         {/* Action Controls & Report Export */}
@@ -134,7 +133,7 @@ const Dashboard = () => {
             href={getFinancialReportExportUrl(startDate, endDate)}
             target="_blank"
             rel="noreferrer"
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/25 transition"
+            className="px-3 xl:px-4 py-2 xl:py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/25 transition whitespace-nowrap"
           >
             <Download className="w-4 h-4" /> Export Financial PDF Statement
           </a>
@@ -142,7 +141,7 @@ const Dashboard = () => {
       </div>
 
       {/* Timeframe Filter Bar */}
-      <div className="p-4 rounded-2xl glass-card border app-border flex flex-wrap items-center justify-between gap-3">
+      <div className="p-3 xl:p-4 rounded-2xl glass-card border app-border flex flex-wrap items-center justify-between gap-3">
         {/* Quick Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {[
@@ -193,11 +192,11 @@ const Dashboard = () => {
       </div>
 
       {/* Primary KPI Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-7 gap-3 xl:gap-4">
         <MetricCard
           title="Gross Revenue"
           value={formatCurrency(kpi.total_revenue)}
-          icon={DollarSign}
+          icon={Banknote}
           color="blue"
           subtitle="Total Sales Income"
         />
@@ -230,11 +229,11 @@ const Dashboard = () => {
           subtitle="Revenue per transaction"
         />
         <MetricCard
-          title="Total Orders"
+          title="Total Invoices"
           value={kpi.total_invoices}
-          icon={ShoppingCart}
+          icon={CreditCard}
           color="blue"
-          subtitle="Completed sales"
+          subtitle="Bills processed"
         />
         <MetricCard
           title="Low Stock Alerts"
@@ -246,19 +245,19 @@ const Dashboard = () => {
       </div>
 
       {/* Cashier Audit Logs Section */}
-      <div className="p-6 rounded-2xl glass-card border app-border space-y-4">
+      <div className="p-4 xl:p-6 rounded-2xl glass-card border app-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-emerald-500" /> Cashier Sales Audit Logs & Register Performance
+            <h2 className="text-sm xl:text-base font-bold app-text-primary flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-emerald-500" /> Cashier Sales Audit Logs &amp; Register Performance
             </h2>
             <p className="text-xs app-text-muted">Track individual cashier sales performance, total orders processed, and average ticket size</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {cashierLogs.map((c) => (
-            <div key={c.cashier_id} className="p-4 rounded-xl app-card-inner border app-border flex items-center justify-between">
+            <div key={c.cashier_id} className="p-3 xl:p-4 rounded-xl app-card-inner border app-border flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-500/20">
                   {c.full_name.substring(0, 2).toUpperCase()}
@@ -279,18 +278,18 @@ const Dashboard = () => {
       </div>
 
       {/* Revenue & Net Profit Trend Timeline Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8 p-6 rounded-2xl glass-card border app-border">
-          <div className="flex items-center justify-between mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 xl:gap-6">
+        <div className="lg:col-span-8 p-4 xl:p-6 rounded-2xl glass-card border app-border">
+          <div className="flex items-center justify-between mb-4 xl:mb-6">
             <div>
-              <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
+              <h2 className="text-sm xl:text-base font-bold app-text-primary flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-emerald-500" /> Revenue vs Profit Financial Timeline
               </h2>
               <p className="text-xs app-text-muted">Daily financial trajectory for selected timeframe</p>
             </div>
           </div>
 
-          <div className="h-72">
+          <div className="h-56 xl:h-72">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData.length > 0 ? chartData : [
                 { date: '2026-09-20', sales: 1200, profit: 450 },
@@ -323,12 +322,12 @@ const Dashboard = () => {
         </div>
 
         {/* Payment Methods Distribution Widget */}
-        <div className="lg:col-span-4 p-6 rounded-2xl glass-card border app-border flex flex-col justify-between">
+        <div className="lg:col-span-4 p-4 xl:p-6 rounded-2xl glass-card border app-border flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold app-text-primary mb-1 flex items-center gap-2">
+            <h2 className="text-sm xl:text-base font-bold app-text-primary mb-1 flex items-center gap-2">
               <PieChart className="w-4 h-4 text-amber-500" /> Payment Distribution
             </h2>
-            <p className="text-xs app-text-muted mb-4">Breakdown by cash, UPI QR & cards</p>
+            <p className="text-xs app-text-muted mb-4">Breakdown by cash, UPI QR &amp; cards</p>
 
             <div className="space-y-3">
               {paymentBreakdown.map((pm, idx) => (
@@ -349,10 +348,10 @@ const Dashboard = () => {
       </div>
 
       {/* Monthly Wise Breakdown Financial Table */}
-      <div className="p-6 rounded-2xl glass-card border app-border space-y-4">
+      <div className="p-4 xl:p-6 rounded-2xl glass-card border app-border space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold app-text-primary flex items-center gap-2">
+            <h2 className="text-sm xl:text-base font-bold app-text-primary flex items-center gap-2">
               <FileSpreadsheet className="w-4 h-4 text-purple-500" /> Month-by-Month Financial Performance Report
             </h2>
             <p className="text-xs app-text-muted">Monthly breakdown of revenue, COGS, net profit, tax, and order metrics</p>
@@ -360,29 +359,29 @@ const Dashboard = () => {
         </div>
 
         <div className="overflow-x-auto rounded-xl border app-border">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs min-w-[600px]">
             <thead className="app-table-header uppercase font-semibold">
               <tr>
-                <th className="p-3.5">Month Period</th>
-                <th className="p-3.5">Gross Revenue</th>
-                <th className="p-3.5">Cost of Goods (COGS)</th>
-                <th className="p-3.5">Net Profit</th>
-                <th className="p-3.5">Tax Collected</th>
-                <th className="p-3.5">Total Orders</th>
-                <th className="p-3.5 text-right">Avg Order Value (AOV)</th>
+                <th className="p-3 xl:p-3.5">Month Period</th>
+                <th className="p-3 xl:p-3.5">Gross Revenue</th>
+                <th className="p-3 xl:p-3.5">Cost of Goods (COGS)</th>
+                <th className="p-3 xl:p-3.5">Net Profit</th>
+                <th className="p-3 xl:p-3.5">Tax Collected</th>
+                <th className="p-3 xl:p-3.5">Total Orders</th>
+                <th className="p-3 xl:p-3.5 text-right">Avg Order Value (AOV)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/40 font-medium">
               {monthlyReports.length > 0 ? (
                 monthlyReports.map((row) => (
                   <tr key={row.month_str} className="app-table-row transition">
-                    <td className="p-3.5 font-bold font-mono text-blue-500">{row.month_str}</td>
-                    <td className="p-3.5 font-bold app-text-primary">{formatCurrency(row.gross_revenue)}</td>
-                    <td className="p-3.5 text-amber-500">{formatCurrency(row.cogs)}</td>
-                    <td className="p-3.5 font-bold text-emerald-500">{formatCurrency(row.net_profit)}</td>
-                    <td className="p-3.5 app-text-secondary">{formatCurrency(row.tax_collected)}</td>
-                    <td className="p-3.5 app-text-secondary">{row.total_invoices}</td>
-                    <td className="p-3.5 text-right font-bold text-purple-400">{formatCurrency(row.avg_order_value)}</td>
+                    <td className="p-3 xl:p-3.5 font-bold font-mono text-blue-500">{row.month_str}</td>
+                    <td className="p-3 xl:p-3.5 font-bold app-text-primary">{formatCurrency(row.gross_revenue)}</td>
+                    <td className="p-3 xl:p-3.5 text-amber-500">{formatCurrency(row.cogs)}</td>
+                    <td className="p-3 xl:p-3.5 font-bold text-emerald-500">{formatCurrency(row.net_profit)}</td>
+                    <td className="p-3 xl:p-3.5 app-text-secondary">{formatCurrency(row.tax_collected)}</td>
+                    <td className="p-3 xl:p-3.5 app-text-secondary">{row.total_invoices}</td>
+                    <td className="p-3 xl:p-3.5 text-right font-bold text-purple-400">{formatCurrency(row.avg_order_value)}</td>
                   </tr>
                 ))
               ) : (

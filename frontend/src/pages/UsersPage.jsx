@@ -124,7 +124,7 @@ const UsersPage = () => {
   const pendingUsersCount = users.filter((u) => !u.is_active).length;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="page-container space-y-5">
       {/* Header & Add Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

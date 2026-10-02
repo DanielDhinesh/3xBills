@@ -52,7 +52,7 @@ const LicensePage = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="page-container space-y-5">
       <div>
         <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
           <Key className="w-6 h-6 text-blue-400" /> SaaS Subscription & Local Licensing Engine
