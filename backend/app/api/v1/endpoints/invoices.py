@@ -427,6 +427,6 @@ async def download_invoice_pdf(invoice_id: str, db: AsyncSession = Depends(get_d
         media_type="application/pdf",
         filename=f"{invoice.invoice_number}.pdf",
         headers={
-            "Content-Disposition": f"inline; filename=\"{invoice.invoice_number}.pdf\""
+            "Content-Disposition": f"attachment; filename=\"{invoice.invoice_number}.pdf\""
         }
     )

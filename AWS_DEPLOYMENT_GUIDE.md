@@ -1,6 +1,6 @@
-# AWS Deployment & HTTPS Guide for 3xBills
+# AWS Docker Deployment & HTTPS Guide for 3xBills
 
-This guide explains how to deploy the 3xBills application (React Frontend + FastAPI Backend) to a single AWS EC2 instance (Ubuntu 24.04 LTS), serve it using Nginx, and secure it with free HTTPS via Let's Encrypt (Certbot).
+This guide explains how to deploy the 3xBills application using your existing `docker-compose.yml` to a single AWS EC2 instance (Ubuntu 24.04 LTS) and secure it with free HTTPS via Let's Encrypt (Certbot).
 
 ## Step 1: AWS EC2 Provisioning & Security
 1. Go to your AWS Console > EC2 > **Launch Instance**.
@@ -14,104 +14,46 @@ This guide explains how to deploy the 3xBills application (React Frontend + Fast
 6. Launch the instance.
 
 ## Step 2: Configure Domain Name DNS
-In your domain registrar (Route53, GoDaddy, etc.):
-- Create an **A Record** for your domain (e.g., `app.yourdomain.com`).
+In your domain registrar (Route53, GoDaddy, Namecheap, etc.):
+- Create an **A Record** for your domain (e.g., `danieldhinesh.online`).
 - Point the record to the **Public IPv4 Address** of your new EC2 instance.
 
-## Step 3: Server Preparation
+## Step 3: Server Preparation & Docker Installation
 SSH into your server:
 ```bash
 ssh -i /path/to/your-key.pem ubuntu@<your-ec2-ip>
 ```
-Install the required system packages:
+Install Docker, Docker Compose, Nginx, and Certbot:
 ```bash
 sudo apt update
-sudo apt install nginx python3-pip python3-venv python3-certbot-nginx git nodejs npm -y
+sudo apt install docker.io docker-compose nginx python3-certbot-nginx git -y
+
+# Add your ubuntu user to the docker group so you don't need sudo for docker commands
+sudo usermod -aG docker ubuntu
+# Log out and log back in (or run `newgrp docker`) for the group change to take effect
+newgrp docker
 ```
 
-## Step 4: Clone & Setup the Application
+## Step 4: Clone & Start the Application
 Clone your repository into the `ubuntu` home folder:
 ```bash
 cd ~
 git clone <your-repo-url> 3xBills
 cd 3xBills
 ```
-
-### 4a. Backend Setup
+Create a `.env` file in the root based on your `.env.example` to set production passwords.
+Start the application using Docker Compose:
 ```bash
-cd ~/3xBills/backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+docker-compose up -d --build
 ```
-Create a `.env` file for your backend in the `backend` folder based on your local settings.
+*(Docker will pull images, build your frontend/backend, and start the containers. Your app is now running on port 3000 locally on the server).*
 
-### 4b. Frontend Setup
+## Step 5: Configure Nginx as a Reverse Proxy
+Nginx on the EC2 host will act as a doorway, taking traffic from the internet and handing it to your Docker container.
+
+We have included a pre-written configuration file in the repository (`nginx-aws.conf`). Copy it to the Nginx directory:
 ```bash
-cd ~/3xBills/frontend
-npm install
-npm run build
-```
-*(This creates the static files in `~/3xBills/frontend/dist`)*
-
-## Step 5: Configure Systemd for the Backend
-You want the FastAPI backend to run automatically in the background and restart on failure.
-Create a systemd service file:
-```bash
-sudo nano /etc/systemd/system/3xbills-backend.service
-```
-Paste this configuration:
-```ini
-[Unit]
-Description=Gunicorn daemon for 3xBills FastAPI
-After=network.target
-
-[Service]
-User=ubuntu
-Group=www-data
-WorkingDirectory=/home/ubuntu/3xBills/backend
-Environment="PATH=/home/ubuntu/3xBills/backend/venv/bin"
-# Starts uvicorn on port 8000
-ExecStart=/home/ubuntu/3xBills/backend/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-Enable and start the service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start 3xbills-backend
-sudo systemctl enable 3xbills-backend
-```
-
-## Step 6: Configure Nginx
-Nginx will serve your React static files directly and forward `/api` requests to the FastAPI backend.
-```bash
-sudo nano /etc/nginx/sites-available/3xbills
-```
-Paste this configuration (Replace `app.yourdomain.com` with your actual domain):
-```nginx
-server {
-    listen 80;
-    server_name app.yourdomain.com;
-
-    # Serve the React Frontend Build
-    location / {
-        root /home/ubuntu/3xBills/frontend/dist;
-        index index.html index.htm;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Proxy API Requests to FastAPI Backend
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000/api/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+sudo cp ~/3xBills/nginx-aws.conf /etc/nginx/sites-available/3xbills
 ```
 Enable the site and restart Nginx:
 ```bash
@@ -126,10 +68,10 @@ sudo nginx -t
 sudo systemctl restart nginx
 ```
 
-## Step 7: Enable HTTPS (SSL Certificate)
-Finally, use Certbot to automatically generate a free SSL certificate from Let's Encrypt and apply it to Nginx.
+## Step 6: Enable HTTPS (SSL Certificate)
+Use Certbot to automatically generate a free SSL certificate from Let's Encrypt and apply it to Nginx.
 ```bash
-sudo certbot --nginx -d app.yourdomain.com
+sudo certbot --nginx -d danieldhinesh.online
 ```
 Follow the prompts (enter email, accept terms). Certbot will automatically rewrite your Nginx configuration file to listen on Port 443 and attach the SSL certificates.
 
@@ -140,4 +82,4 @@ sudo certbot renew --dry-run
 ```
 
 ## You're Live!
-Navigate to `https://app.yourdomain.com` in your browser.
+Navigate to `https://danieldhinesh.online` in your browser.

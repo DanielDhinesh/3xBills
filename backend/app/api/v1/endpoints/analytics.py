@@ -312,5 +312,5 @@ async def export_financial_report(
         path=report_filepath,
         media_type="application/pdf",
         filename=report_filename,
-        headers={"Content-Disposition": f"inline; filename=\"{report_filename}\""}
+        headers={"Content-Disposition": f"attachment; filename=\"{report_filename}\""}
     )

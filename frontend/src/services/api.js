@@ -37,22 +37,17 @@ api.interceptors.response.use(
 export const getAssetUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url;
-  const hostname = window.location.hostname || 'localhost';
-  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-  return `http://${hostname}:8000${cleanUrl}`;
+  return url.startsWith('/') ? url : `/${url}`;
 };
 
 export const getPdfDownloadUrl = (pdfUrl) => {
   if (!pdfUrl) return '#';
   if (pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')) return pdfUrl;
-  const hostname = window.location.hostname || 'localhost';
-  return `http://${hostname}:8000${pdfUrl}`;
+  return pdfUrl;
 };
 
-
 export const getFinancialReportExportUrl = (startDate = '', endDate = '') => {
-  const hostname = window.location.hostname || 'localhost';
-  let url = `http://${hostname}:8000/api/v1/dashboard/export-report`;
+  let url = `/api/v1/dashboard/export-report`;
   const params = [];
   if (startDate) params.push(`start_date=${encodeURIComponent(startDate)}`);
   if (endDate) params.push(`end_date=${encodeURIComponent(endDate)}`);
